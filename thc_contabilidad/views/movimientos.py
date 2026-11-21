@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -110,11 +112,14 @@ class MovimientoDialog(Gtk.Dialog):
             concepto = self.concepto.get_text().strip()
             if not concepto:
                 raise ValueError("Escribe un concepto para el movimiento.")
+            monto = a_centros(self.monto.get_text())
+            if monto <= 0:
+                raise ValueError("El monto debe ser mayor que cero.")
             datos = {
                 "fecha": self.fecha.get_fecha(obligatorio=True),
                 "tipo": texto_combo(self.tipo),
                 "concepto": concepto,
-                "monto_cents": a_centros(self.monto.get_text()),
+                "monto_cents": monto,
                 "categoria": texto_combo(self.categoria) or "General",
                 "contacto_id": self.contactos.get(texto_combo(self.contacto)),
                 "metodo_pago": texto_combo(self.metodo),
@@ -257,12 +262,26 @@ class MovimientosView(Gtk.Box):
         self.abrir_dialogo(self._seleccionado())
 
     def abrir_dialogo(self, fila=None):
+        if fila:
+            venta_id = self.db.venta_de_movimiento(fila["id"])
+            if venta_id:
+                mostrar_error(
+                    self.ventana,
+                    f"Este ingreso lo generó la venta #{venta_id}. Para cambiarlo, "
+                    "elimina o vuelve a cobrar esa venta desde Cobros › Ventas.",
+                    "Ingreso vinculado a una venta",
+                )
+                return
         dialogo = MovimientoDialog(self.ventana, self.db, fila)
         respuesta = dialogo.run()
         datos = dialogo.resultado
         dialogo.destroy()
         if respuesta == Gtk.ResponseType.OK and datos:
-            self.db.guardar_movimiento(datos, fila["id"] if fila else None)
+            try:
+                self.db.guardar_movimiento(datos, fila["id"] if fila else None)
+            except (ValueError, sqlite3.IntegrityError) as exc:
+                mostrar_error(self.ventana, str(exc), "No se pudo guardar")
+                return
             self.recargar()
             self.ventana.actualizar_resumen()
             accion = "actualizado" if fila else "registrado"
@@ -273,11 +292,24 @@ class MovimientosView(Gtk.Box):
         if not fila:
             self.ventana.set_status("Selecciona un movimiento para eliminar.")
             return
+        venta_id = self.db.venta_de_movimiento(fila["id"])
+        if venta_id:
+            mostrar_error(
+                self.ventana,
+                f"Este ingreso lo generó la venta #{venta_id}. Elimina la venta "
+                "desde Cobros › Ventas para quitar también su ingreso.",
+                "Ingreso vinculado a una venta",
+            )
+            return
         if confirmar(
             self.ventana, "Eliminar movimiento",
             f"¿Eliminar '{fila['concepto']}' por {formatear_monto(fila['monto_cents'])}?",
         ):
-            self.db.eliminar_movimiento(fila["id"])
+            try:
+                self.db.eliminar_movimiento(fila["id"])
+            except (ValueError, sqlite3.IntegrityError) as exc:
+                mostrar_error(self.ventana, str(exc), "No se pudo eliminar")
+                return
             self.recargar()
             self.ventana.actualizar_resumen()
             self.ventana.set_status("Movimiento eliminado.")

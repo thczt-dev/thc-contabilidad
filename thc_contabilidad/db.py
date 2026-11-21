@@ -6,6 +6,9 @@ import os
 import sqlite3
 from contextlib import contextmanager
 
+from .catalogo_inicial import entries as catalogo_inicial
+from .utils import calcular_totales, formatear_monto
+
 ESQUEMA = """
 PRAGMA foreign_keys = ON;
 
@@ -48,9 +51,55 @@ CREATE TABLE IF NOT EXISTS proyectos (
     creado_en         TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS productos (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre        TEXT NOT NULL,
+    tipo          TEXT NOT NULL DEFAULT 'Producto' CHECK (tipo IN ('Producto', 'Servicio', 'Paquete')),
+    precio_cents  INTEGER NOT NULL DEFAULT 0 CHECK (precio_cents >= 0),
+    categoria     TEXT NOT NULL DEFAULT '',
+    precio_etiqueta TEXT NOT NULL DEFAULT '',
+    activo        INTEGER NOT NULL DEFAULT 1,
+    destacado     INTEGER NOT NULL DEFAULT 0 CHECK (destacado IN (0, 1)),
+    notas         TEXT NOT NULL DEFAULT '',
+    creado_en     TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS ventas (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha            TEXT NOT NULL,
+    contacto_id      INTEGER REFERENCES contactos(id) ON DELETE SET NULL,
+    metodo_pago      TEXT NOT NULL DEFAULT 'Efectivo',
+    subtotal_cents   INTEGER NOT NULL DEFAULT 0,
+    descuento_tipo   TEXT NOT NULL DEFAULT '%' CHECK (descuento_tipo IN ('%', 'Fijo')),
+    descuento_valor  REAL NOT NULL DEFAULT 0,
+    descuento_cents  INTEGER NOT NULL DEFAULT 0,
+    base_cents       INTEGER NOT NULL DEFAULT 0,
+    impuesto_pct     REAL NOT NULL DEFAULT 0,
+    impuesto_cents   INTEGER NOT NULL DEFAULT 0,
+    total_cents      INTEGER NOT NULL DEFAULT 0,
+    movimiento_id    INTEGER REFERENCES movimientos(id) ON DELETE SET NULL,
+    notas            TEXT NOT NULL DEFAULT '',
+    creado_en        TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS venta_items (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    venta_id        INTEGER NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+    producto_id     INTEGER REFERENCES productos(id) ON DELETE SET NULL,
+    nombre          TEXT NOT NULL,
+    tipo            TEXT NOT NULL DEFAULT 'Producto',
+    cantidad        INTEGER NOT NULL DEFAULT 1,
+    precio_cents    INTEGER NOT NULL,
+    descuento_pct   INTEGER NOT NULL DEFAULT 0,
+    descuento_cents INTEGER NOT NULL DEFAULT 0,
+    total_cents     INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos(fecha);
 CREATE INDEX IF NOT EXISTS idx_movimientos_tipo ON movimientos(tipo);
 CREATE INDEX IF NOT EXISTS idx_proyectos_estado ON proyectos(estado);
+CREATE INDEX IF NOT EXISTS idx_ventas_fecha ON ventas(fecha);
+CREATE INDEX IF NOT EXISTS idx_venta_items_venta ON venta_items(venta_id);
 """
 
 MOVIMIENTO_CAMPOS = (
@@ -64,6 +113,10 @@ PROYECTO_CAMPOS = (
 CONTACTO_CAMPOS = (
     "nombre", "tipo", "identificacion", "telefono", "email", "direccion", "notas",
 )
+PRODUCTO_CAMPOS = (
+    "nombre", "tipo", "precio_cents", "categoria", "precio_etiqueta",
+    "activo", "destacado", "notas",
+)
 
 
 class Database:
@@ -71,9 +124,85 @@ class Database:
 
     def __init__(self, ruta: str):
         self.ruta = ruta
+        es_nueva = not os.path.exists(ruta)
         os.makedirs(os.path.dirname(os.path.abspath(ruta)), exist_ok=True)
         with self.conexion() as conn:
             conn.executescript(ESQUEMA)
+        # Primero se reconstruye `productos` si su CHECK no admite Paquete;
+        # después se agregan las columnas nuevas, para que no se pierdan.
+        self._migrar_tipos_producto()
+        self._migrar()
+        if es_nueva:
+            self.sembrar_catalogo_inicial()
+
+    def _migrar(self):
+        """Agrega columnas nuevas a bases creadas por versiones anteriores."""
+        nuevas = {
+            "descuento_tipo": "TEXT NOT NULL DEFAULT '%'",
+            "descuento_valor": "REAL NOT NULL DEFAULT 0",
+            "base_cents": "INTEGER NOT NULL DEFAULT 0",
+            "impuesto_pct": "REAL NOT NULL DEFAULT 0",
+            "impuesto_cents": "INTEGER NOT NULL DEFAULT 0",
+        }
+        with self.conexion() as conn:
+            actuales = {fila["name"] for fila in conn.execute("PRAGMA table_info(ventas)")}
+            for nombre, definicion in nuevas.items():
+                if nombre not in actuales:
+                    conn.execute(f"ALTER TABLE ventas ADD COLUMN {nombre} {definicion}")
+            conn.execute(
+                "UPDATE ventas SET base_cents = subtotal_cents - descuento_cents "
+                "WHERE base_cents = 0 AND subtotal_cents > 0"
+            )
+
+            columnas_producto = {
+                "precio_etiqueta": "TEXT NOT NULL DEFAULT ''",
+                "destacado": "INTEGER NOT NULL DEFAULT 0 CHECK (destacado IN (0, 1))",
+            }
+            actuales = {fila["name"] for fila in conn.execute("PRAGMA table_info(productos)")}
+            for nombre, definicion in columnas_producto.items():
+                if nombre not in actuales:
+                    conn.execute(f"ALTER TABLE productos ADD COLUMN {nombre} {definicion}")
+
+    def _migrar_tipos_producto(self):
+        """Habilita el tipo 'Paquete' en bases creadas por versiones anteriores.
+
+        SQLite no permite cambiar un CHECK con ALTER TABLE, así que se recrea
+        la tabla. Se usa una conexión aparte con las claves foráneas apagadas
+        para que `venta_items.producto_id` siga apuntando a `productos` y no se
+        pierdan los vínculos con las ventas ya registradas.
+        """
+        conn = sqlite3.connect(self.ruta, timeout=10)
+        try:
+            conn.execute("PRAGMA foreign_keys = OFF")
+            conn.execute("PRAGMA legacy_alter_table = ON")
+            fila = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'productos'"
+            ).fetchone()
+            if fila and "Paquete" not in (fila[0] or ""):
+                conn.execute("ALTER TABLE productos RENAME TO productos_old")
+                conn.execute("""
+                    CREATE TABLE productos (
+                        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nombre        TEXT NOT NULL,
+                        tipo          TEXT NOT NULL DEFAULT 'Producto'
+                                      CHECK (tipo IN ('Producto', 'Servicio', 'Paquete')),
+                        precio_cents  INTEGER NOT NULL DEFAULT 0 CHECK (precio_cents >= 0),
+                        categoria     TEXT NOT NULL DEFAULT '',
+                        activo        INTEGER NOT NULL DEFAULT 1,
+                        notas         TEXT NOT NULL DEFAULT '',
+                        creado_en     TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+                    )
+                """)
+                conn.execute(
+                    "INSERT INTO productos "
+                    "(id, nombre, tipo, precio_cents, categoria, activo, notas, creado_en) "
+                    "SELECT id, nombre, tipo, precio_cents, categoria, activo, notas, creado_en "
+                    "FROM productos_old"
+                )
+                conn.execute("DROP TABLE productos_old")
+            conn.commit()
+        finally:
+            conn.close()
 
     @contextmanager
     def conexion(self):
@@ -128,10 +257,26 @@ class Database:
         with self.conexion() as conn:
             return [dict(fila) for fila in conn.execute(sql, params)]
 
+    def venta_de_movimiento(self, movimiento_id: int) -> int | None:
+        """Devuelve la venta que generó este ingreso, si la hay."""
+        with self.conexion() as conn:
+            fila = conn.execute(
+                "SELECT id FROM ventas WHERE movimiento_id = ?", (movimiento_id,)
+            ).fetchone()
+            return fila["id"] if fila else None
+
     def guardar_movimiento(self, datos: dict, id: int | None = None) -> int:
+        if id and self.venta_de_movimiento(id):
+            raise ValueError(
+                "Este ingreso fue generado por una venta. Adminístralo desde Cobros › Ventas."
+            )
         return self._guardar("movimientos", MOVIMIENTO_CAMPOS, datos, id)
 
     def eliminar_movimiento(self, id: int) -> int:
+        if self.venta_de_movimiento(id):
+            raise ValueError(
+                "Este ingreso pertenece a una venta. Elimina la venta desde Cobros › Ventas."
+            )
         return self._eliminar("movimientos", id)
 
     # ------------------------------------------------------------------- proyectos
@@ -253,6 +398,213 @@ class Database:
             opciones[f"{fila['nombre']} ({fila['tipo']})"] = fila["id"]
         return opciones
 
+    # ------------------------------------------------------------- productos / POS
+
+    def sembrar_catalogo_inicial(self) -> int:
+        """Carga el catálogo base sin duplicar lo que el usuario ya tiene.
+
+        Se llama al crear una base de datos nueva y puede ejecutarse cuando se
+        quiera (por ejemplo desde un script) para recuperar el catálogo. La
+        clave es el nombre, así que es seguro llamarla varias veces.
+        """
+        insertados = 0
+        with self.conexion() as conn:
+            existentes = {
+                fila[0] for fila in conn.execute("SELECT nombre FROM productos")
+            }
+            for item in catalogo_inicial():
+                if item["nombre"] in existentes:
+                    continue
+                conn.execute(
+                    "INSERT INTO productos "
+                    "(nombre, tipo, precio_cents, categoria, precio_etiqueta, "
+                    " activo, destacado, notas) "
+                    "VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+                    (item["nombre"], item["tipo"], item["precio_cents"],
+                     item["categoria"], item["etiqueta"], item["destacado"],
+                     item["notas"]),
+                )
+                insertados += 1
+        return insertados
+
+    def listar_productos(self, buscar="", tipo=None, solo_activos=False) -> list[dict]:
+        sql = "SELECT * FROM productos WHERE 1=1"
+        params: list = []
+        if tipo and tipo != "Todos":
+            sql += " AND tipo = ?"
+            params.append(tipo)
+        if solo_activos:
+            sql += " AND activo = 1"
+        if buscar:
+            patron = f"%{buscar.strip().lower()}%"
+            sql += (" AND (LOWER(nombre) LIKE ? OR LOWER(COALESCE(categoria, '')) LIKE ?)")
+            params.extend([patron, patron])
+        sql += " ORDER BY activo DESC, nombre COLLATE NOCASE"
+        with self.conexion() as conn:
+            return [dict(fila) for fila in conn.execute(sql, params)]
+
+    def guardar_producto(self, datos: dict, id: int | None = None) -> int:
+        return self._guardar("productos", PRODUCTO_CAMPOS, datos, id)
+
+    def eliminar_producto(self, id: int) -> int:
+        return self._eliminar("productos", id)
+
+    def listar_ventas(self, buscar="", desde=None, hasta=None, contacto_id=None) -> list[dict]:
+        sql = (
+            "SELECT v.*, COALESCE(c.nombre, '') AS contacto, "
+            "(SELECT COUNT(*) FROM venta_items vi WHERE vi.venta_id = v.id) AS n_items "
+            "FROM ventas v LEFT JOIN contactos c ON c.id = v.contacto_id "
+            "WHERE 1=1"
+        )
+        params: list = []
+        if desde:
+            sql += " AND v.fecha >= ?"
+            params.append(desde)
+        if hasta:
+            sql += " AND v.fecha <= ?"
+            params.append(hasta)
+        if contacto_id:
+            sql += " AND v.contacto_id = ?"
+            params.append(contacto_id)
+        if buscar:
+            patron = f"%{buscar.strip().lower()}%"
+            sql += (" AND (LOWER(COALESCE(c.nombre, '')) LIKE ? "
+                    "OR LOWER(COALESCE(v.notas, '')) LIKE ? "
+                    "OR CAST(v.id AS TEXT) LIKE ?)")
+            params.extend([patron, patron, patron])
+        sql += " ORDER BY v.fecha DESC, v.id DESC"
+        with self.conexion() as conn:
+            return [dict(fila) for fila in conn.execute(sql, params)]
+
+    def obtener_venta(self, id: int) -> dict | None:
+        with self.conexion() as conn:
+            fila = conn.execute("SELECT * FROM ventas WHERE id = ?", (id,)).fetchone()
+            if fila is None:
+                return None
+            venta = dict(fila)
+            venta["items"] = [
+                dict(item) for item in conn.execute(
+                    "SELECT * FROM venta_items WHERE venta_id = ? ORDER BY id", (id,)
+                )
+            ]
+            return venta
+
+    def registrar_venta(self, datos: dict) -> int:
+        """Guarda la venta, sus items y el ingreso asociado en una transacción.
+
+        El total (con descuento e impuesto incluidos) se registra como un
+        ingreso en ``movimientos``, de modo que aparece igual en Resumen,
+        Movimientos, Calendario y Reportes.
+        """
+        items = datos.get("items") or []
+        if not items:
+            raise ValueError("Agrega al menos un producto o servicio al cobro.")
+
+        preparados = []
+        for item in items:
+            nombre = str(item.get("nombre") or "").strip()
+            if not nombre:
+                raise ValueError("Hay un item sin nombre.")
+            preparados.append(item)
+
+        calculo = calcular_totales(
+            preparados,
+            descuento_tipo=datos.get("descuento_tipo") or "%",
+            descuento_valor=datos.get("descuento_valor") or 0,
+            impuesto_pct=datos.get("impuesto_pct") or 0,
+        )
+        if calculo["total"] <= 0:
+            raise ValueError("El total del cobro debe ser mayor que cero.")
+
+        descuento_tipo = calculo["descuento_tipo"]
+        descuento_valor = calculo["descuento_valor"]
+        impuesto_pct = calculo["impuesto_pct"]
+
+        detalle = []
+        if calculo["descuento"]:
+            etiqueta = (f"{descuento_valor:g} %" if descuento_tipo == "%"
+                        else formatear_monto(int(descuento_valor)))
+            detalle.append(f"Descuento {etiqueta}: -{formatear_monto(calculo['descuento'])}")
+        if calculo["impuesto"]:
+            detalle.append(
+                f"Impuesto {impuesto_pct:g} %: +{formatear_monto(calculo['impuesto'])}"
+            )
+        notas = (datos.get("notas") or "").strip()
+        if detalle:
+            notas = notas + (" | " if notas else "") + "; ".join(detalle)
+
+        with self.conexion() as conn:
+            cursor = conn.execute(
+                """INSERT INTO ventas
+                   (fecha, contacto_id, metodo_pago, subtotal_cents, descuento_tipo,
+                    descuento_valor, descuento_cents, base_cents, impuesto_pct,
+                    impuesto_cents, total_cents, notas)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (datos["fecha"], datos.get("contacto_id"),
+                 datos.get("metodo_pago") or "Efectivo", calculo["subtotal"],
+                 descuento_tipo, descuento_valor, calculo["descuento"],
+                 calculo["base"], impuesto_pct, calculo["impuesto"],
+                 calculo["total"], notas),
+            )
+            venta_id = cursor.lastrowid
+            conn.executemany(
+                """INSERT INTO venta_items
+                   (venta_id, producto_id, nombre, tipo, cantidad, precio_cents,
+                    descuento_pct, descuento_cents, total_cents)
+                   VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?)""",
+                [(venta_id, item.get("producto_id"), item["nombre"].strip(),
+                  item.get("tipo") or "Producto", int(item["cantidad"]),
+                  int(item["precio_cents"]),
+                  int(item["precio_cents"]) * int(item["cantidad"]))
+                 for item in preparados],
+            )
+            movimiento = conn.execute(
+                """INSERT INTO movimientos
+                   (fecha, tipo, concepto, monto_cents, categoria, contacto_id,
+                    metodo_pago, notas)
+                   VALUES (?, 'Ingreso', ?, ?, 'Ventas', ?, ?, ?)""",
+                (datos["fecha"], f"Venta #{venta_id} ({len(preparados)} items)",
+                 calculo["total"], datos.get("contacto_id"),
+                 datos.get("metodo_pago") or "Efectivo", notas),
+            )
+            conn.execute(
+                "UPDATE ventas SET movimiento_id = ? WHERE id = ?",
+                (movimiento.lastrowid, venta_id),
+            )
+            return venta_id
+
+    def eliminar_venta(self, id: int) -> int:
+        """Elimina la venta y el ingreso que generó, para no alterar el balance."""
+        with self.conexion() as conn:
+            fila = conn.execute(
+                "SELECT movimiento_id FROM ventas WHERE id = ?", (id,)
+            ).fetchone()
+            if fila is None:
+                return 0
+            if fila["movimiento_id"]:
+                conn.execute("DELETE FROM movimientos WHERE id = ?", (fila["movimiento_id"],))
+            return conn.execute("DELETE FROM ventas WHERE id = ?", (id,)).rowcount
+
+    def resumen_ventas(self, desde=None, hasta=None) -> dict:
+        sql = (
+            "SELECT COUNT(*) AS n, "
+            "COALESCE(SUM(subtotal_cents), 0) AS subtotal, "
+            "COALESCE(SUM(descuento_cents), 0) AS descuento, "
+            "COALESCE(SUM(impuesto_cents), 0) AS impuesto, "
+            "COALESCE(SUM(total_cents), 0) AS total, "
+            "COALESCE(SUM(descuento_cents > 0), 0) AS con_descuento "
+            "FROM ventas WHERE 1=1"
+        )
+        params: list = []
+        if desde:
+            sql += " AND fecha >= ?"
+            params.append(desde)
+        if hasta:
+            sql += " AND fecha <= ?"
+            params.append(hasta)
+        with self.conexion() as conn:
+            return dict(conn.execute(sql, params).fetchone())
+
     # -------------------------------------------------------------- reportes / stats
 
     def totales(self, desde=None, hasta=None) -> dict:
@@ -326,7 +678,7 @@ class Database:
 
     def obtener(self, tabla: str, id: int) -> dict | None:
         """Devuelve un registro por su id (tablas internas de la aplicación)."""
-        if tabla not in {"movimientos", "proyectos", "contactos"}:
+        if tabla not in {"movimientos", "proyectos", "contactos", "productos"}:
             raise ValueError("Tabla no permitida")
         with self.conexion() as conn:
             fila = conn.execute(f"SELECT * FROM {tabla} WHERE id = ?", (id,)).fetchone()

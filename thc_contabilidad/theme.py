@@ -143,6 +143,32 @@ button.destructive-action {{
     font-weight: 700;
 }}
 
+/* Punto de cobro */
+.producto-card {{
+    background-color: {PANEL_CLARO};
+    border: 1px solid {BORDE};
+    border-radius: 12px;
+    padding: 10px;
+}}
+.producto-card:hover {{ background-color: #243049; border-color: {ACENTO}; }}
+.producto-nombre {{ font-size: 13px; font-weight: 700; color: #f1f5fb; }}
+.producto-precio {{ font-size: 12px; font-weight: 600; color: {ACENTO}; }}
+.producto-tipo {{ font-size: 10px; color: {TEXTO_SUAVE}; }}
+.paquete-card {{
+    background-color: #1e2b45;
+    border: 1px solid rgba(138, 180, 255, 0.55);
+}}
+.paquete-card:hover {{ background-color: #263658; }}
+.paquete-card .producto-tipo {{ color: {ACENTO}; font-weight: 600; }}
+.recomendado-badge {{
+    font-size: 9px;
+    color: {ACENTO};
+    border: 1px solid rgba(138, 180, 255, 0.45);
+    border-radius: 6px;
+    padding: 1px 5px;
+    margin-top: 2px;
+}}
+
 /* Calendario */
 .mes-titulo {{ font-size: 17px; font-weight: 700; color: #f1f5fb; }}
 .dia-semana {{ color: {TEXTO_SUAVE}; font-weight: 600; font-size: 11px; }}

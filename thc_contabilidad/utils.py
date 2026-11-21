@@ -27,6 +27,7 @@ ESTADOS_PROYECTO = ("Pendiente", "En curso", "Completado", "Cancelado")
 PRIORIDADES = ("Alta", "Media", "Baja")
 TIPOS_MOVIMIENTO = ("Ingreso", "Gasto")
 TIPOS_CONTACTO = ("Cliente", "Proveedor", "Ambos")
+TIPOS_PRODUCTO = ("Producto", "Servicio", "Paquete")
 METODOS_PAGO = ("Efectivo", "Transferencia", "Tarjeta", "PSE", "Otro")
 CATEGORIAS_INGRESO = (
     "Ventas", "Servicios", "Honorarios", "Comisiones", "Intereses", "Otros ingresos",
@@ -42,6 +43,7 @@ def a_centros(texto: str) -> int:
     """Convierte texto de monto COP a centavos enteros.
 
     Acepta formatos comunes: 1250000, 1.250.000, 1250.50, $ 1.250,50.
+    Rechaza los negativos: la app guarda montos como enteros positivos.
     """
     if texto is None:
         raise ValueError("Escribe un monto.")
@@ -75,11 +77,10 @@ def a_centros(texto: str) -> int:
     except InvalidOperation as exc:
         raise ValueError("El monto no tiene un formato válido.") from exc
 
-    if valor <= 0 and not negativo:
-        raise ValueError("El monto debe ser mayor que cero.")
+    if negativo or valor < 0:
+        raise ValueError("El monto no puede ser negativo.")
 
-    centavos = int((valor * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-    return -centavos if negativo else centavos
+    return int((valor * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def formatear_monto(centavos: int | None, simbolo: bool = True) -> str:
@@ -174,6 +175,62 @@ def meses_recientes(cantidad: int) -> list[str]:
 
 def porcentaje(parte: int, total: int) -> float:
     return (abs(parte) / abs(total) * 100) if total else 0.0
+
+
+def calcular_totales(
+    items, descuento_tipo: str = "%", descuento_valor=0, impuesto_pct=0.0,
+) -> dict:
+    """Calcula el cobro completo, en centavos, con descuento e impuesto.
+
+    El descuento puede ser ``%`` (sobre el subtotal) o ``Fijo`` (valor en
+    centavos, admitiendo también ``$`` como alias). El impuesto se aplica sobre
+    el subtotal ya descontado. La interfaz y la base de datos usan esta misma
+    función para que los totales nunca difieran.
+    """
+    subtotal = 0
+    for item in items or []:
+        cantidad = int(item.get("cantidad") or 0)
+        precio = int(item.get("precio_cents") or 0)
+        if cantidad <= 0 or precio < 0:
+            raise ValueError("Revisa las cantidades y los precios del cobro.")
+        subtotal += precio * cantidad
+
+    tipo = "Fijo" if str(descuento_tipo) in {"$", "Fijo"} else "%"
+    valor = Decimal(str(descuento_valor or 0))
+    if valor < 0:
+        raise ValueError("El descuento no puede ser negativo.")
+
+    if tipo == "%":
+        if valor > 100:
+            raise ValueError("El descuento no puede superar el 100 %.")
+        descuento = int(
+            (Decimal(subtotal) * valor / Decimal(100)).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+    else:
+        descuento = min(int(valor), subtotal)
+
+    base = subtotal - descuento
+    pct = Decimal(str(impuesto_pct or 0))
+    if pct < 0 or pct > 100:
+        raise ValueError("El impuesto debe estar entre 0 % y 100 %.")
+    impuesto = int(
+        (Decimal(base) * pct / Decimal(100)).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    )
+
+    return {
+        "subtotal": subtotal,
+        "descuento": descuento,
+        "base": base,
+        "impuesto": impuesto,
+        "total": base + impuesto,
+        "descuento_tipo": tipo,
+        "descuento_valor": float(valor),
+        "impuesto_pct": float(pct),
+    }
 
 
 def barra_texto(fraccion: float, ancho: int = 12) -> str:

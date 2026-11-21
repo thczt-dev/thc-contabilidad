@@ -16,8 +16,8 @@ from . import __version__, theme  # noqa: E402
 from .db import Database  # noqa: E402
 from .ui_helpers import boton, etiqueta  # noqa: E402
 from .views import (  # noqa: E402
-    CalendarioView, ContactosView, MovimientosView, ProyectosView,
-    ReportesView, ResumenView,
+    CalendarioView, CobrosView, ContactosView, MovimientosView,
+    ProyectosView, ReportesView, ResumenView,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,12 +27,15 @@ RUTA_DB = os.environ.get("THC_CONTABILIDAD_DB") or os.path.join(
     BASE_DIR, "datos", "contabilidad.db"
 )
 
+# Orden real de las pestañas del Notebook. La navegación usa las vistas como
+# referencia para que un reordenamiento no rompa los atajos.
 PAGINA_RESUMEN = 0
 PAGINA_MOVIMIENTOS = 1
 PAGINA_PROYECTOS = 2
 PAGINA_CALENDARIO = 3
-PAGINA_CONTACTOS = 4
-PAGINA_REPORTES = 5
+PAGINA_COBROS = 4
+PAGINA_CONTACTOS = 5
+PAGINA_REPORTES = 6
 
 def cargar_estilos():
     configuracion = Gtk.Settings.get_default()
@@ -63,6 +66,7 @@ class ThcApplication(Gtk.Application):
             ("nuevo-movimiento", self._nuevo_movimiento),
             ("nuevo-proyecto", self._nuevo_proyecto),
             ("calendario", self._ir_calendario),
+            ("cobro", self._nuevo_cobro),
             ("exportar", self._exportar),
             ("acerca-de", self._acerca_de),
             ("salir", self._salir),
@@ -75,6 +79,7 @@ class ThcApplication(Gtk.Application):
         self.set_accels_for_action("app.nuevo-movimiento", ["<Control>n"])
         self.set_accels_for_action("app.nuevo-proyecto", ["<Control>p"])
         self.set_accels_for_action("app.calendario", ["<Control><Shift>c"])
+        self.set_accels_for_action("app.cobro", ["<Control><Shift>v"])
         self.set_accels_for_action("app.exportar", ["<Control>e"])
         self.set_accels_for_action("app.salir", ["<Control>q"])
 
@@ -86,21 +91,26 @@ class ThcApplication(Gtk.Application):
 
     def _nuevo_movimiento(self, _accion, _parametro):
         if self.window:
-            self.window.ir_a(PAGINA_MOVIMIENTOS)
+            self.window.ir_a(self.window.movimientos)
             self.window.movimientos.abrir_dialogo()
 
     def _nuevo_proyecto(self, _accion, _parametro):
         if self.window:
-            self.window.ir_a(PAGINA_PROYECTOS)
+            self.window.ir_a(self.window.proyectos)
             self.window.proyectos.abrir_dialogo()
 
     def _ir_calendario(self, _accion, _parametro):
         if self.window:
-            self.window.ir_a(PAGINA_CALENDARIO)
+            self.window.ir_a(self.window.calendario)
+
+    def _nuevo_cobro(self, _accion, _parametro):
+        if self.window:
+            self.window.ir_a(self.window.cobros)
+            self.window.cobros.sub.set_current_page(0)
 
     def _exportar(self, _accion, _parametro):
         if self.window:
-            self.window.ir_a(PAGINA_REPORTES)
+            self.window.ir_a(self.window.reportes)
             self.window.reportes._exportar("movimientos")
 
     def _acerca_de(self, _accion, _parametro):
@@ -110,7 +120,7 @@ class ThcApplication(Gtk.Application):
         dialogo.set_program_name("THC Contabilidad")
         dialogo.set_version(__version__)
         dialogo.set_comments(
-            "Gestión sencilla de ingresos, gastos, proyectos, calendario, contactos y reportes.\n"
+            "Gestión sencilla de ingresos, gastos, proyectos, calendario, cobros, contactos y reportes.\n"
             "Datos guardados localmente en SQLite."
         )
         dialogo.set_authors(["ThcDev"])
@@ -146,7 +156,12 @@ class MainWindow(Gtk.ApplicationWindow):
         nuevo_proy.connect("clicked", lambda *_: self._nuevo_proyecto())
         cabecera.pack_start(nuevo_proy)
 
+        cobrar = boton("accessories-calculator-symbolic", "Cobrar", "Nuevo cobro (Ctrl+Shift+V)")
+        cobrar.connect("clicked", lambda *_: self._nuevo_cobro())
+        cabecera.pack_start(cobrar)
+
         menu = Gio.Menu()
+        menu.append("Nuevo cobro (POS)", "app.cobro")
         menu.append("Ver calendario", "app.calendario")
         menu.append("Exportar movimientos a CSV", "app.exportar")
         menu.append("Acerca de THC Contabilidad", "app.acerca-de")
@@ -166,6 +181,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.movimientos = MovimientosView(self)
         self.proyectos = ProyectosView(self)
         self.calendario = CalendarioView(self)
+        self.cobros = CobrosView(self)
         self.contactos = ContactosView(self)
         self.reportes = ReportesView(self)
 
@@ -176,6 +192,7 @@ class MainWindow(Gtk.ApplicationWindow):
             ("Movimientos", self.movimientos),
             ("Proyectos", self.proyectos),
             ("Calendario", self.calendario),
+            ("Cobros", self.cobros),
             ("Contactos", self.contactos),
             ("Reportes", self.reportes),
         ):
@@ -192,26 +209,35 @@ class MainWindow(Gtk.ApplicationWindow):
         if hasattr(pagina, "recargar"):
             pagina.recargar()
 
-    def ir_a(self, indice: int):
+    def ir_a(self, destino):
+        """Va a una pestaña por índice o, de forma segura, por vista/widget."""
+        indice = (self.notebook.page_num(destino) if isinstance(destino, Gtk.Widget)
+                  else destino)
         self.notebook.set_current_page(indice)
 
     def set_status(self, texto: str):
         self.status.set_label(texto)
 
     def actualizar_resumen(self):
-        self.resumen.recargar()
+        """Refresca todas las vistas que dependen de los movimientos."""
+        for vista in (self.resumen, self.movimientos, self.calendario, self.reportes):
+            vista.recargar()
 
     def actualizar_combos(self):
         """Los formularios leen los contactos al abrirse; método reservado."""
         return None
 
     def _nuevo_movimiento(self):
-        self.ir_a(PAGINA_MOVIMIENTOS)
+        self.ir_a(self.movimientos)
         self.movimientos.abrir_dialogo()
 
     def _nuevo_proyecto(self):
-        self.ir_a(PAGINA_PROYECTOS)
+        self.ir_a(self.proyectos)
         self.proyectos.abrir_dialogo()
+
+    def _nuevo_cobro(self):
+        self.ir_a(self.cobros)
+        self.cobros.sub.set_current_page(0)
 
 
 def main():

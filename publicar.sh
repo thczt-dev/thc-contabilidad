@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Crea el repositorio en GitHub, sube el código y publica la release v1.0.0.
+# Crea el repositorio en GitHub, sube el código y publica la release indicada.
 # Requiere: gh auth login (una sola vez).
 
 set -euo pipefail
@@ -11,7 +11,13 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 REPO="${GH_REPO:-thc-contabilidad}"
 VISIBILIDAD="${GH_VISIBILITY:-public}"
-VERSION="${GH_VERSION:-v1.0.0}"
+VERSION="${GH_VERSION:-v1.1.0}"
+NOTAS="RELEASE_NOTES_${VERSION}.md"
+
+if [ ! -f "$NOTAS" ]; then
+    echo "Error: falta $NOTAS. Crea las notas de $VERSION antes de publicar." >&2
+    exit 1
+fi
 
 case "$VISIBILIDAD" in
     public|private|internal) ;;
@@ -44,10 +50,10 @@ git push origin "$VERSION"
 if gh release view "$VERSION" >/dev/null 2>&1; then
     echo "La release $VERSION ya existe; no se modifica."
 else
-    echo "Publicando release $VERSION..."
+    echo "Publicando release $VERSION con notas de $NOTAS..."
     gh release create "$VERSION" \
         --title "THC Contabilidad $VERSION" \
-        --notes-file RELEASE_NOTES.md
+        --notes-file "$NOTAS"
 fi
 
 echo

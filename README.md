@@ -1,12 +1,13 @@
 # THC Contabilidad
 
-![Versión](https://img.shields.io/badge/versión-1.0.0-blue)
+![Versión](https://img.shields.io/badge/versión-1.1.0-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Plataforma](https://img.shields.io/badge/plataforma-Linux-orange)
 
 Programa de escritorio nativo para Linux que permite llevar un control sencillo de
-**ingresos, gastos, proyectos pendientes, calendario, contactos y reportes**. Todo
-funciona sin internet: la información se guarda en una base de datos SQLite local.
+**ingresos, gastos, proyectos pendientes, calendario, cobros (POS), contactos y
+reportes**. Todo funciona sin internet: la información se guarda en una base de
+datos SQLite local.
 
 Moneda configurada: **peso colombiano (COP)**.
 
@@ -16,9 +17,10 @@ así que el aspecto no depende del tema del sistema.
 
 ## Descargas
 
-La versión estable es **v1.0.0** (21 de noviembre de 2026).
-Los binarios/archivos de cada lanzamiento se publican en
-[GitHub Releases](https://github.com/ThcDev/thc-contabilidad/releases).
+La versión estable es **v1.1.0** (21 de noviembre de 2026), que añade el
+punto de cobro. La v1.0.0 sigue disponible para quien no necesite POS.
+Los archivos de cada lanzamiento se publican en
+[GitHub Releases](https://github.com/thczt-dev/thc-contabilidad/releases).
 El historial de cambios está en [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requisitos
@@ -41,7 +43,7 @@ Copia y pega esta línea en la terminal. Descarga el instalador, clona el
 repositorio, comprueba las dependencias y crea el acceso directo:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ThcDev/thc-contabilidad/v1.0.0/instalar-github.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.0/instalar-github.sh)
 ```
 
 El instalador guarda el código en `~/.local/share/thc-contabilidad`. Cuando
@@ -50,7 +52,7 @@ vuelvas a ejecutarlo, actualiza la instalación con `git pull`.
 ### Opción B: clonar manualmente
 
 ```bash
-git clone https://github.com/ThcDev/thc-contabilidad.git
+git clone --branch v1.1.0 https://github.com/thczt-dev/thc-contabilidad.git
 cd thc-contabilidad
 ./instalar.sh
 ```
@@ -70,8 +72,8 @@ sudo apt install python3-gi gir1.2-gtk-3.0 python3-cairo
 
 | Variable | Para qué | Valor por defecto |
 |---|---|---|
-| `THC_REPO_URL` | URL del repositorio a clonar | `https://github.com/ThcDev/thc-contabilidad.git` |
-| `THC_VERSION` | Etiqueta a instalar | `v1.0.0` |
+| `THC_REPO_URL` | URL del repositorio a clonar | `https://github.com/thczt-dev/thc-contabilidad.git` |
+| `THC_VERSION` | Etiqueta a instalar | `v1.1.0` |
 | `THC_INSTALL_DIR` | Carpeta de destino | `~/.local/share/thc-contabilidad` |
 | `THC_CONTABILIDAD_DB` | Ruta de la base de datos | `datos/contabilidad.db` dentro del proyecto |
 
@@ -79,7 +81,7 @@ Ejemplo:
 
 ```bash
 THC_INSTALL_DIR="$HOME/Apps/thc-contabilidad" \
-bash <(curl -fsSL https://raw.githubusercontent.com/ThcDev/thc-contabilidad/v1.0.0/instalar-github.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.0/instalar-github.sh)
 ```
 
 ## Uso
@@ -99,6 +101,7 @@ Abre el programa de una de estas formas:
 | **Movimientos** | Registrar ingresos y gastos con fecha, concepto, monto, categoría, contacto, método de pago y notas. Buscar, filtrar, editar y eliminar. |
 | **Proyectos** | Crear proyectos con cliente, estado, prioridad, fechas y presupuesto. Marcar como completados y ver vencimientos. |
 | **Calendario** | Vista mensual con puntos de color por día: ingresos, gastos, entregas e inicios de proyectos. Panel lateral con el detalle del día seleccionado y resumen del mes. |
+| **Cobros** | Punto de cobro en dos pantallas: catálogo editable de productos, servicios y paquetes, carrito, descuento final en `%` o `$`, impuestos e histórico de ventas. Cada cobro se registra como ingreso en el resto de módulos. |
 | **Contactos** | Directorio de clientes y proveedores con NIT, teléfono, correo y dirección. |
 | **Reportes** | Balances por período, resumen mensual, distribución por categoría y exportación a CSV. |
 
@@ -107,8 +110,49 @@ Abre el programa de una de estas formas:
 - `Ctrl + N` — nuevo movimiento
 - `Ctrl + P` — nuevo proyecto
 - `Ctrl + Shift + C` — abrir calendario
+- `Ctrl + Shift + V` — nuevo cobro (POS)
 - `Ctrl + E` — exportar movimientos a CSV
 - `Ctrl + Q` — salir
+
+## Punto de cobro (POS)
+
+La pestaña **Cobros** tiene solo dos secciones:
+
+1. **Cobrar** — una única pantalla con todo:
+   - **Catálogo editable**: haz clic en una tarjeta para agregarla al carrito;
+     usa ✎ para editarla o ✕ para borrarla. Abajo está el formulario para crear
+     o modificar productos, servicios o paquetes (nombre, tipo, precio COP,
+     categoría, disponibilidad y notas). También permite poner una etiqueta al
+     precio («Desde», «por producto») y marcar un item como *Recomendado*.
+   - **Carrito**: selecciona un item para cambiar su cantidad o quitarlo.
+   - **Descuento al final**: elige `%` o `$` y escribe el valor. El panel muestra
+     cuánto dinero dejaste de recibir.
+   - **Impuesto**: escribe un porcentaje (hay atajos para 0, 5 y 19 %) y se
+     calcula sobre la base ya descontada.
+   - **Totales en vivo**: subtotal, descuento, base, impuesto y total a cobrar.
+     Al pulsar **Cobrar** se guarda la venta y se crea automáticamente un
+     ingreso en *Resumen*, *Movimientos*, *Calendario* y *Reportes*.
+2. **Ventas** — histórico con filtros por fecha y búsqueda, detalle de los items,
+   eliminación (que también quita el ingreso asociado del balance) y exportación
+   a CSV con subtotal, descuento, base, impuesto y total.
+
+Todos los cálculos se hacen en centavos, con el mismo código para la interfaz y
+la base de datos, para que los totales nunca difieran.
+
+### Catálogo inicial
+
+Las bases nuevas se crean con 33 items listos para cobrar: 30 servicios
+(páginas web, catálogos y comercio digital, sistemas y funcionalidades y
+adicionales) y 3 paquetes (*STARTER*, *BUSINESS* y *PROFESSIONAL*). Los paquetes
+tienen una tarjeta con más relieve que los servicios y *BUSINESS* lleva un
+distintivo discreto de «Recomendado». Los precios que son «Desde» o «por
+producto» conservan esa etiqueta en la tarjeta y en el editor. Todo se puede
+editar o borrar; si tienes una base antigua, puedes cargar el catálogo sin
+duplicados con:
+
+```bash
+python3 -c "from thc_contabilidad.db import Database; print(Database('datos/contabilidad.db').sembrar_catalogo_inicial())"
+```
 
 ## Formato de montos
 
@@ -142,13 +186,14 @@ thc-contabilidad/
 ├── .github/workflows/ci.yml  # verificación de sintaxis en GitHub Actions
 ├── CHANGELOG.md              # historial de versiones
 ├── RELEASE_NOTES.md           # notas de la release v1.0.0
+├── RELEASE_NOTES_v1.1.0.md    # notas de la release v1.1.0
 ├── LICENSE                   # MIT
 ├── thc-contabilidad          # lanzador ejecutable
 ├── thc-contabilidad.desktop  # plantilla del acceso directo
 ├── thc-contabilidad.svg      # icono
 ├── instalar.sh               # instala lanzador e icono en ~/.local
 ├── instalar-github.sh        # clona, instala dependencias y crea el lanzador
-├── publicar.sh               # crea el repo y la release v1.0.0 con gh CLI
+├── publicar.sh               # crea el repo y publica la release con gh CLI
 ├── proyecto.json             # metadatos para el portafolio web
 ├── datos/                    # base de datos SQLite (se crea sola)
 │   └── .gitkeep
@@ -164,6 +209,7 @@ thc-contabilidad/
         ├── movimientos.py
         ├── proyectos.py
         ├── calendario.py     # vista mensual y detalle por día
+        ├── cobros.py         # POS, catálogo editable, descuentos, impuestos y ventas
         ├── contactos.py
         └── reportes.py
 ```
@@ -178,23 +224,22 @@ python3 -m thc_contabilidad.main            # ejecutar desde el código fuente
 El flujo de CI de GitHub ejecuta la comprobación de sintaxis y valida
 `proyecto.json` en cada push y pull request.
 
-### Publicar la release v1.0.0
+### Publicar una release
 
-Con GitHub CLI autenticado (`gh auth login`), un solo comando crea el
-repositorio, sube el código, empuja el tag y publica la release con las notas:
+Con GitHub CLI autenticado (`gh auth login`), un solo comando sube el código,
+empuja el tag y publica la release con las notas:
 
 ```bash
-./publicar.sh
+./publicar.sh                       # v1.1.0 por defecto
+GH_VERSION=v1.2.0 ./publicar.sh     # otra versión, si existe su tag
 ```
 
-Por defecto crea `thc-contabilidad` público bajo tu usuario. Para cambiarlo:
+Por defecto usa el repositorio `thc-contabilidad` bajo tu usuario. Para
+crear otro con otra visibilidad:
 
 ```bash
 GH_REPO=mi-contabilidad GH_VISIBILITY=private ./publicar.sh
 ```
-
-Las URLs de ejemplo de este README usan `ThcDev` como propietario; si tu
-usuario es otro, reemplázalo al clonar.
 
 ## Solución de problemas
 

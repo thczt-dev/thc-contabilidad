@@ -4,6 +4,7 @@ from .resumen import ResumenView
 from .movimientos import MovimientosView
 from .proyectos import ProyectosView
 from .calendario import CalendarioView
+from .cobros import CobrosView
 from .contactos import ContactosView
 from .reportes import ReportesView
 
@@ -12,6 +13,7 @@ __all__ = [
     "MovimientosView",
     "ProyectosView",
     "CalendarioView",
+    "CobrosView",
     "ContactosView",
     "ReportesView",
 ]

@@ -174,6 +174,7 @@ class ReportesView(Gtk.Box):
         dialogo.destroy()
 
     def _escribir_csv(self, ruta, clase) -> int:
+        desde, hasta = rango_periodo(texto_combo(self.periodo))
         with open(ruta, "w", newline="", encoding="utf-8-sig") as archivo:
             escritor = csv.writer(archivo, delimiter=";")
             if clase == "movimientos":
@@ -181,7 +182,7 @@ class ReportesView(Gtk.Box):
                     "ID", "Fecha", "Tipo", "Concepto", "Categoría", "Contacto",
                     "Monto COP", "Método de pago", "Notas",
                 ])
-                filas = self.db.listar_movimientos()
+                filas = self.db.listar_movimientos(desde=desde, hasta=hasta)
                 for fila in filas:
                     escritor.writerow([
                         fila["id"], fila["fecha"], fila["tipo"], fila["concepto"],
@@ -194,6 +195,13 @@ class ReportesView(Gtk.Box):
                     "Fecha inicio", "Fecha límite", "Presupuesto COP", "Notas",
                 ])
                 filas = self.db.listar_proyectos()
+                if desde and hasta:
+                    filas = [
+                        fila for fila in filas
+                        if any(desde <= fecha <= hasta for fecha in (
+                            fila["fecha_inicio"] or "", fila["fecha_limite"] or ""
+                        ))
+                    ]
                 for fila in filas:
                     escritor.writerow([
                         fila["id"], fila["nombre"], fila["cliente"], fila["descripcion"],

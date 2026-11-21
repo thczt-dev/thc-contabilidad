@@ -22,13 +22,13 @@ Linux con Python 3.11+, GTK 3 y PyGObject (`python3-gi`, `gir1.2-gtk-3.0`, `pyth
 ## Instalación
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ThcDev/thc-contabilidad/v1.0.0/instalar-github.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.0.0/instalar-github.sh)
 ```
 
 O manualmente:
 
 ```bash
-git clone --branch v1.0.0 https://github.com/ThcDev/thc-contabilidad.git
+git clone --branch v1.0.0 https://github.com/thczt-dev/thc-contabilidad.git
 cd thc-contabilidad
 ./instalar.sh
 ```
