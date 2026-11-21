@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Lanzador nativo de THC Contabilidad
+set -euo pipefail
+
+BASE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="${BASE_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
+
+if ! python3 -c "import gi" >/dev/null 2>&1; then
+    echo "Error: falta el módulo 'gi' (PyGObject). Instala python3-gi y gir1.2-gtk-3.0." >&2
+    exit 1
+fi
+
+exec python3 -m thc_contabilidad.main "$@"

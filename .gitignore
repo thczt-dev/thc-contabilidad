@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.python-version
+
+# Datos locales (NO subir información contable real)
+datos/*.db
+datos/*.db-*
+datos/*.sqlite
+datos/*.sqlite-*
+*.csv
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+
+# Editores y sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

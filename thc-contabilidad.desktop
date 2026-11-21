@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=THC Contabilidad
+GenericName=Contabilidad
+Comment=Gestión sencilla de ingresos, gastos y proyectos
+Exec="__EXEC_PATH__"
+Icon=thc-contabilidad
+Terminal=false
+Categories=Office;Finance;
+Keywords=contabilidad;ingresos;gastos;proyectos;finanzas;
+StartupNotify=true
