@@ -9,10 +9,9 @@ from __future__ import annotations
 import json
 import os
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RUTA = os.environ.get("THC_CONTABILIDAD_CONFIG") or os.path.join(
-    BASE_DIR, "datos", "config.json"
-)
+from . import rutas
+
+RUTA = rutas.ruta_config()
 
 PREDETERMINADOS = {
     "idioma": "es",

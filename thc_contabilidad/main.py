@@ -5,13 +5,21 @@ from __future__ import annotations
 import os
 import sys
 
-import gi
+from . import __version__, rutas
+
+rutas.preparar_entorno_gtk()
+
+if "--version" in sys.argv[1:]:
+    print(f"THC Contabilidad {__version__}")
+    raise SystemExit(0)
+
+import gi  # noqa: E402
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, Gtk  # noqa: E402
 
-from . import __version__, config, theme  # noqa: E402
+from . import config, theme  # noqa: E402
 from .db import Database  # noqa: E402
 from .i18n import tr  # noqa: E402
 from .ui_helpers import boton, etiqueta  # noqa: E402
@@ -20,12 +28,9 @@ from .views import (  # noqa: E402
     ProyectosView, ReportesView, ResumenView,
 )
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# La ruta puede sobreescribirse con THC_CONTABILIDAD_DB (útil para pruebas o
-# para guardar los datos fuera del clon cuando el repositorio es de solo lectura).
-RUTA_DB = os.environ.get("THC_CONTABILIDAD_DB") or os.path.join(
-    BASE_DIR, "datos", "contabilidad.db"
-)
+# En Windows la ruta por defecto es %APPDATA%\THC Contabilidad; en Linux se
+# conserva datos/ junto al código. THC_CONTABILIDAD_DB sigue teniendo prioridad.
+RUTA_DB = rutas.ruta_db()
 
 # Orden real de las pestañas del Notebook. La navegación usa las vistas como
 # referencia para que un reordenamiento no rompa los atajos.
@@ -52,6 +57,17 @@ PESTANAS = (
 def cargar_estilos():
     """Aplica el tema elegido en Ajustes (oscuro, claro o sistema)."""
     theme.aplicar_tema(config.get("tema"), config.get("tamano_texto"))
+
+
+def logo_about():
+    """Carga el logo incluido, o None si GdkPixbuf no está disponible."""
+    try:
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf
+        ruta = rutas.recurso("thc-contabilidad.png")
+        return GdkPixbuf.Pixbuf.new_from_file_at_scale(ruta, 128, 128, True)
+    except Exception:
+        return None
 
 
 class ThcApplication(Gtk.Application):
@@ -162,7 +178,11 @@ class ThcApplication(Gtk.Application):
         )
         dialogo.set_authors(["ThcDev"])
         dialogo.set_website_label("ThcDev")
-        dialogo.set_logo_icon_name("thc-contabilidad")
+        logo = logo_about()
+        if logo is not None:
+            dialogo.set_logo(logo)
+        else:
+            dialogo.set_logo_icon_name("thc-contabilidad")
         dialogo.run()
         dialogo.destroy()
 
@@ -177,7 +197,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self.db = db
         self.set_default_size(1220, 820)
         self.set_position(Gtk.WindowPosition.CENTER)
-        self.set_icon_name("thc-contabilidad")
+        ruta_icono = rutas.icono_app()
+        if os.path.exists(ruta_icono):
+            self.set_icon_from_file(ruta_icono)
+        else:
+            self.set_icon_name("thc-contabilidad")
 
         cabecera = Gtk.HeaderBar()
         cabecera.set_show_close_button(True)
@@ -280,10 +304,26 @@ class MainWindow(Gtk.ApplicationWindow):
         self.cobros.sub.set_current_page(0)
 
 
+def smoke_test() -> int:
+    """Comprueba rutas, SQLite, recursos y GTK sin abrir la ventana."""
+    from . import config as modulo_config
+
+    Database(RUTA_DB)
+    modulo_config.guardar({})
+    icono = rutas.icono_app()
+    if not os.path.exists(icono):
+        raise RuntimeError(f"Falta el icono empaquetado: {icono}")
+    correcto, _mensaje = Gtk.init_check([])
+    if not correcto:
+        raise RuntimeError("GTK no pudo inicializarse")
+    print(f"OK: {rutas.ruta_db()}")
+    print(f"OK: {modulo_config.RUTA}")
+    return 0
+
+
 def main():
-    if "--version" in sys.argv[1:]:
-        print(f"THC Contabilidad {__version__}")
-        return 0
+    if "--smoke-test" in sys.argv[1:]:
+        return smoke_test()
     aplicacion = ThcApplication()
     raise SystemExit(aplicacion.run(sys.argv))
 

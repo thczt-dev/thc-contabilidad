@@ -55,8 +55,18 @@ if ! python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository
     if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
         sudo apt-get update
         sudo apt-get install -y python3-gi gir1.2-gtk-3.0 python3-cairo
+    elif command -v pacman >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
+        sudo pacman -S --needed gtk3 python-gobject python-cairo adwaita-icon-theme desktop-file-utils
     else
-        echo "Error: instala manualmente python3-gi, gir1.2-gtk-3.0 y python3-cairo." >&2
+        echo "Error: instala manualmente las dependencias de GTK 3 para tu distro." >&2
+        echo "  Debian/Ubuntu: python3-gi gir1.2-gtk-3.0 python3-cairo" >&2
+        echo "  Arch:          gtk3 python-gobject python-cairo adwaita-icon-theme" >&2
+        exit 1
+    fi
+
+    if ! python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk' >/dev/null 2>&1; then
+        echo "Error: las dependencias se instalaron pero 'gi' sigue sin funcionar." >&2
+        echo "Cierra la terminal y vuelve a intentarlo." >&2
         exit 1
     fi
 fi

@@ -4,6 +4,32 @@ Todas las versiones notables de THC Contabilidad se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+
+- Compatibilidad con Windows: paquete onedir con MSYS2 + PyInstaller que incluye
+  el runtime GTK3, typelibs, esquemas GLib, temas, iconos y loaders de GdkPixbuf.
+- Instalador visual con Inno Setup: permite elegir idioma, tema, tamaño del
+  texto, moneda, formato de importes y confirmación al eliminar antes del primer
+  arranque. Esos valores se escriben en `%APPDATA%\THC Contabilidad\config.json`.
+- Iconos propios PNG e ICO generados desde `thc-contabilidad.svg`, usados para la
+  ventana y el diálogo «Acerca de» sin depender del tema de iconos del sistema.
+- Flujo de CI de Windows que compila el paquete, genera el instalador y ejecuta
+  un smoke test del ejecutable empaquetado.
+- Instrucciones y detección automática de dependencias para Arch Linux, Manjaro
+  y otras distros base Arch (`gtk3`, `python-gobject`, `python-cairo`,
+  `adwaita-icon-theme`, `desktop-file-utils`).
+
+### Cambiado
+
+- En Windows los datos y las preferencias se guardan en
+  `%APPDATA%\THC Contabilidad\`. En Linux se mantiene `datos/` junto al código.
+  Las variables `THC_CONTABILIDAD_DB` y `THC_CONTABILIDAD_CONFIG` siguen
+  teniendo prioridad.
+- `--version` funciona sin inicializar GTK y se añadió `--smoke-test` para
+  verificar rutas, SQLite, recursos y GTK desde CI.
+
 ## [1.1.1] - 2026-11-23
 
 Versión de pulido visual y personalización. No incorpora funciones de negocio

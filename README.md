@@ -2,9 +2,9 @@
 
 ![Versión](https://img.shields.io/badge/versión-1.1.1-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
-![Plataforma](https://img.shields.io/badge/plataforma-Linux-orange)
+![Plataforma](https://img.shields.io/badge/plataforma-Linux%20%7C%20Windows%20WIP-orange)
 
-Programa de escritorio nativo para Linux que permite llevar un control sencillo de
+Programa de escritorio nativo para Linux y Windows que permite llevar un control sencillo de
 **ingresos, gastos, proyectos pendientes, calendario, cobros (POS), contactos y
 reportes**. Todo funciona sin internet: la información se guarda en una base de
 datos SQLite local.
@@ -27,16 +27,39 @@ Los archivos de cada lanzamiento se publican en
 [GitHub Releases](https://github.com/thczt-dev/thc-contabilidad/releases).
 El historial de cambios está en [`CHANGELOG.md`](CHANGELOG.md).
 
+### Windows (en preparación)
+
+La versión de Windows se empaqueta con **MSYS2 + PyInstaller** y se distribuye
+mediante un instalador visual creado con **Inno Setup**. Durante la instalación
+puedes elegir idioma, tema, tamaño del texto, moneda, formato de importes y
+confirmación al eliminar; esos valores se guardan en
+`%APPDATA%\THC Contabilidad\config.json` y la app arranca ya configurada.
+Todavía no hay release pública de Windows: el instalador se genera en GitHub
+Actions como artefacto de CI hasta que se publique la primera versión.
+
 ## Requisitos
 
 - Linux con GTK 3 y Python 3.11 o superior.
 - Paquetes del sistema: `python3-gi`, `gir1.2-gtk-3.0` (y `python3-cairo` para el gráfico).
-  En Debian/Ubuntu:
+
+  Debian/Ubuntu y derivados:
 
   ```bash
   sudo apt install python3-gi gir1.2-gtk-3.0 python3-cairo
   ```
 
+  Arch Linux, Manjaro y otras distros base Arch:
+
+  ```bash
+  sudo pacman -S --needed gtk3 python-gobject python-cairo adwaita-icon-theme desktop-file-utils
+  ```
+
+  En base Arch, `python-gobject` aporta el módulo `gi` y `gtk3` incluye el
+  typelib de GTK 3. `adwaita-icon-theme` asegura los iconos symbolic de la
+  interfaz; `desktop-file-utils` permite actualizar el menú de aplicaciones.
+
+- Windows 10 u 11 de 64 bits para el instalador. El paquete incluye el runtime
+  GTK3, así que no hay que instalar MSYS2 ni Python por separado.
 - No se necesita conexión a internet para usar la aplicación.
 
 ## Instalación fácil
@@ -52,6 +75,10 @@ bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v
 
 El instalador guarda el código en `~/.local/share/thc-contabilidad`. Cuando
 vuelvas a ejecutarlo, actualiza la instalación con `git pull`.
+
+En Debian/Ubuntu instala las dependencias con `apt`; en Arch, Manjaro y otras
+distros base Arch detecta `pacman` e instala `gtk3`, `python-gobject`,
+`python-cairo`, `adwaita-icon-theme` y `desktop-file-utils`.
 
 ### Opción B: clonar manualmente
 
@@ -189,15 +216,19 @@ Puedes escribir los valores de varias formas; el programa los normaliza a COP:
 
 La base de datos se crea automáticamente en:
 
-```
-datos/contabilidad.db
-```
+| Sistema | Base de datos | Preferencias |
+|---|---|---|
+| Linux | `datos/contabilidad.db` dentro del proyecto | `datos/config.json` |
+| Windows | `%APPDATA%\THC Contabilidad\contabilidad.db` | `%APPDATA%\THC Contabilidad\config.json` |
+
+En Windows los datos van a `%APPDATA%` para que la app pueda instalarse en
+`Program Files` sin permisos de escritura allí. El instalador escribe solo el
+`config.json` inicial; la base de datos la crea la app al abrir.
 
 Ese archivo **no se sube a GitHub** (está en `.gitignore`) porque contiene
-información real. Las preferencias de Ajustes viven aparte, en
-`datos/config.json`, que tampoco se sube. Para cambiar la ubicación de la base
-de datos, define `THC_CONTABILIDAD_DB` antes de iniciar la app; para las
-preferencias, `THC_CONTABILIDAD_CONFIG`.
+información real. Para cambiar la ubicación de la base de datos, define
+`THC_CONTABILIDAD_DB` antes de iniciar la app; para las preferencias,
+`THC_CONTABILIDAD_CONFIG`.
 
 Para hacer una copia de seguridad, basta con copiar ese archivo mientras la
 aplicación esté cerrada. Los CSV exportados se guardan con codificación
@@ -207,25 +238,34 @@ aplicación esté cerrada. Los CSV exportados se guardan con codificación
 
 ```
 thc-contabilidad/
-├── .github/workflows/ci.yml  # verificación de sintaxis en GitHub Actions
+├── .github/workflows/ci.yml  # CI de Linux y build/smoke test de Windows
 ├── CHANGELOG.md              # historial de versiones
 ├── RELEASE_NOTES.md           # notas de la release v1.0.0
 ├── RELEASE_NOTES_v1.1.0.md    # notas de la release v1.1.0
 ├── RELEASE_NOTES_v1.1.1.md    # notas de la release v1.1.1
 ├── LICENSE                   # MIT
-├── thc-contabilidad          # lanzador ejecutable
-├── thc-contabilidad.desktop  # plantilla del acceso directo
-├── thc-contabilidad.svg      # icono
+├── thc-contabilidad          # lanzador ejecutable de Linux
+├── thc-contabilidad.desktop  # plantilla del acceso directo de Linux
+├── thc-contabilidad.svg      # icono fuente
+├── thc-contabilidad.png      # icono PNG incluido en la app
+├── thc-contabilidad.ico      # icono Windows
 ├── instalar.sh               # instala lanzador e icono en ~/.local
 ├── instalar-github.sh        # clona, instala dependencias y crea el lanzador
 ├── publicar.sh               # crea el repo y publica la release con gh CLI
 ├── proyecto.json             # metadatos para el portafolio web
-├── datos/                    # datos locales (se crean solos, no se suben)
+├── windows/                  # empaquetado Windows
+│   ├── entrypoint.py         # entrada usada por PyInstaller
+│   ├── thc-contabilidad.spec # especificación de PyInstaller
+│   ├── build-windows.ps1     # compila el paquete y el instalador
+│   ├── instalar-windows.iss  # asistente visual de Inno Setup
+│   └── Output/               # instaladores generados (no se suben)
+├── datos/                    # datos locales en Linux (no se suben)
 │   ├── .gitkeep
 │   ├── contabilidad.db       # base de datos SQLite
 │   └── config.json           # preferencias: idioma, tema, moneda, etc.
 └── thc_contabilidad/
     ├── __init__.py           # versión del paquete
+    ├── rutas.py              # rutas de datos/recursos por sistema operativo
     ├── main.py               # aplicación y ventana principal
     ├── db.py                 # esquema y consultas SQLite
     ├── config.py             # preferencias y definiciones de tema/moneda/idioma
@@ -276,7 +316,10 @@ GH_REPO=mi-contabilidad GH_VISIBILITY=private ./publicar.sh
 
 - **No abre desde el menú:** ejecuta `./instalar.sh` y cierra sesión/abre sesión.
 - **Error al iniciar:** comprueba que `python3 -c "import gi"` funcione en la terminal.
-- **Quieres empezar de cero:** borra `datos/contabilidad.db` con la aplicación cerrada.
+- **En Arch/Manjaro falta `gi`:** instala `python-gobject` y `gtk3` con
+  `sudo pacman -S --needed gtk3 python-gobject python-cairo`.
+- **Quieres empezar de cero:** borra `datos/contabilidad.db` con la aplicación cerrada
+  (en Windows, `%APPDATA%\THC Contabilidad\contabilidad.db`).
 
 ## Licencia
 

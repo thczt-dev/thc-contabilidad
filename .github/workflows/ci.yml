@@ -18,7 +18,52 @@ jobs:
           python-version: '3.11'
 
       - name: Comprobar sintaxis
-        run: python -m compileall -q thc_contabilidad
+        run: python -m compileall -q thc_contabilidad windows/entrypoint.py
 
       - name: Comprobar metadatos JSON
         run: python -m json.tool proyecto.json > /dev/null
+
+  windows:
+    name: Compilar paquete Windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Instalar MSYS2 y dependencias GTK
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gtk3
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-gobject
+            mingw-w64-x86_64-python-cairo
+            mingw-w64-x86_64-pyinstaller
+            mingw-w64-x86_64-pyinstaller-hooks-contrib
+
+      - name: Instalar Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compilar aplicación e instalador
+        run: .\windows\build-windows.ps1 -Installer
+
+      - name: Smoke test del ejecutable empaquetado
+        run: |
+          $temporal = Join-Path $env:RUNNER_TEMP 'thc-smoke'
+          New-Item -ItemType Directory -Force -Path $temporal | Out-Null
+          $env:THC_CONTABILIDAD_DB = Join-Path $temporal 'contabilidad.db'
+          $env:THC_CONTABILIDAD_CONFIG = Join-Path $temporal 'config.json'
+          & '.\dist\thc-contabilidad\thc-contabilidad-diag.exe' --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Subir instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: thc-contabilidad-windows
+          path: windows/Output/*.exe
+          if-no-files-found: error
