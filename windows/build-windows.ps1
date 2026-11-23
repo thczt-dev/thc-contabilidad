@@ -27,6 +27,18 @@ if (-not (Test-Path $Python)) {
     throw "No se encontró python.exe en $Prefix\bin."
 }
 
+function Ruta-Recurso([string]$Relativo) {
+    # PyInstaller 6 coloca los datos en _internal; versiones anteriores los
+    # dejan en la raíz del paquete. Devolvemos la base y la ruta encontrada.
+    foreach ($base in @((Join-Path $Dist '_internal'), $Dist)) {
+        $candidato = Join-Path $base $Relativo
+        if (Test-Path $candidato) {
+            return [pscustomobject]@{ Base = $base; Ruta = $candidato }
+        }
+    }
+    return $null
+}
+
 $env:MSYSTEM_PREFIX = $Prefix
 $env:PATH = "$Prefix\bin;$env:PATH"
 Write-Host "Usando MSYS2: $Prefix"
@@ -44,26 +56,26 @@ try {
         --workpath (Join-Path $Proyecto 'build')
     if ($LASTEXITCODE -ne 0) { throw 'PyInstaller falló.' }
 
-    $Schemas = Join-Path $Dist 'share\glib-2.0\schemas'
-    if (-not (Test-Path $Schemas)) { throw "Faltan los esquemas GLib en $Schemas" }
-    Write-Host 'Compilando esquemas GLib...'
-    & (Join-Path $Prefix 'bin\glib-compile-schemas.exe') $Schemas
+    $Schemas = Ruta-Recurso 'share\glib-2.0\schemas'
+    if (-not $Schemas) { throw 'Faltan los esquemas GLib en el paquete compilado.' }
+    Write-Host "Compilando esquemas GLib en $($Schemas.Ruta)..."
+    & (Join-Path $Prefix 'bin\glib-compile-schemas.exe') $Schemas.Ruta
     if ($LASTEXITCODE -ne 0) { throw 'No se pudieron compilar los esquemas GLib.' }
 
-    $LoadersDir = Join-Path $Dist 'lib\gdk-pixbuf-2.0\2.10.0\loaders'
-    if (-not (Test-Path $LoadersDir)) { throw "Faltan los loaders de GdkPixbuf en $LoadersDir" }
-    $Loaders = Get-ChildItem -Path $LoadersDir -Filter '*.dll' | ForEach-Object {
-        $_.FullName.Substring($Dist.Length + 1).Replace('\', '/')
-    }
-    if ($Loaders.Count -eq 0) { throw 'No hay loaders de GdkPixbuf para registrar.' }
+    $Loaders = Ruta-Recurso 'lib\gdk-pixbuf-2.0\2.10.0\loaders'
+    if (-not $Loaders) { throw 'Faltan los loaders de GdkPixbuf en el paquete compilado.' }
+    $Modulos = @(Get-ChildItem -Path $Loaders.Ruta -Filter '*.dll' | ForEach-Object {
+        $_.FullName.Substring($Loaders.Base.Length + 1).Replace('\', '/')
+    })
+    if ($Modulos.Count -eq 0) { throw 'No hay loaders de GdkPixbuf para registrar.' }
 
     Write-Host 'Generando loaders.cache relativo...'
-    $Cache = Join-Path $Dist 'lib\gdk-pixbuf-2.0\2.10.0\loaders.cache'
-    # Las rutas son relativas a $Dist: hay que ejecutar la herramienta desde la
-    # propia carpeta del paquete para que el caché resultante también lo sea.
-    Push-Location $Dist
+    $Cache = Join-Path (Split-Path $Loaders.Ruta -Parent) 'loaders.cache'
+    # Ejecutamos la herramienta desde la base del paquete para que las rutas
+    # escritas en loaders.cache sean relativas y sigan sirviendo al mover {app}.
+    Push-Location $Loaders.Base
     try {
-        & (Join-Path $Prefix 'bin\gdk-pixbuf-query-loaders.exe') @Loaders | Set-Content -Path $Cache -Encoding ascii
+        & (Join-Path $Prefix 'bin\gdk-pixbuf-query-loaders.exe') @Modulos | Set-Content -Path $Cache -Encoding ascii
     }
     finally {
         Pop-Location
