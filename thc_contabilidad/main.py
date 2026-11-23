@@ -19,13 +19,13 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, Gtk  # noqa: E402
 
-from . import config, theme  # noqa: E402
+from . import config, licencia, theme  # noqa: E402
 from .db import Database  # noqa: E402
 from .i18n import tr  # noqa: E402
 from .ui_helpers import boton, etiqueta  # noqa: E402
 from .views import (  # noqa: E402
-    AjustesDialog, CalendarioView, CobrosView, ContactosView, MovimientosView,
-    ProyectosView, ReportesView, ResumenView,
+    AjustesDialog, CalendarioView, CobrosView, ContactosView, LicenciaDialog,
+    MovimientosView, ProyectosView, ReportesView, ResumenView,
 )
 
 # En Windows la ruta por defecto es %APPDATA%\THC Contabilidad; en Linux se
@@ -90,6 +90,7 @@ class ThcApplication(Gtk.Application):
             ("cobro", self._nuevo_cobro),
             ("exportar", self._exportar),
             ("ajustes", self._abrir_ajustes),
+            ("licencia", self._abrir_licencia),
             ("acerca-de", self._acerca_de),
             ("salir", self._salir),
         )
@@ -110,6 +111,9 @@ class ThcApplication(Gtk.Application):
         if self.window is None:
             self.db = Database(RUTA_DB)
             self.window = MainWindow(self, self.db)
+        if not self._verificar_licencia():
+            self.quit()
+            return
         self.window.present()
 
     def _nuevo_movimiento(self, _accion, _parametro):
@@ -153,6 +157,35 @@ class ThcApplication(Gtk.Application):
             self.recargar_interfaz()
         else:
             self.window.set_status(tr("Preferencias guardadas"))
+
+    def _abrir_licencia(self, _accion=None, _parametro=None):
+        if not self.window:
+            return
+        dialogo = LicenciaDialog(self.window)
+        dialogo.run()
+        dialogo.destroy()
+        licencia.registrar_arranque()
+        self.window.set_status(licencia.texto_estado())
+
+    def _verificar_licencia(self) -> bool:
+        if not licencia.es_edicion_paga():
+            return True
+        if licencia.estado()["activa"]:
+            licencia.registrar_arranque()
+            return True
+        self._abrir_licencia()
+        if licencia.estado()["activa"]:
+            return True
+        aviso = Gtk.MessageDialog(
+            transient_for=self.window,
+            modal=True,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK,
+            text="Se necesita una licencia activa para usar la edición Windows.",
+        )
+        aviso.run()
+        aviso.destroy()
+        return False
 
     def recargar_interfaz(self):
         """Reconstruye la ventana para que el nuevo idioma se vea en todas partes."""
@@ -227,6 +260,8 @@ class MainWindow(Gtk.ApplicationWindow):
         menu.append(tr("Ver calendario"), "app.calendario")
         menu.append(tr("Exportar movimientos a CSV"), "app.exportar")
         menu.append(tr("Ajustes"), "app.ajustes")
+        if licencia.es_edicion_paga():
+            menu.append("Licencia...", "app.licencia")
         menu.append(tr("Acerca de THC Contabilidad"), "app.acerca-de")
         menu.append(tr("Salir"), "app.salir")
         boton_menu = Gtk.MenuButton()
@@ -242,7 +277,11 @@ class MainWindow(Gtk.ApplicationWindow):
         ajustes.connect("clicked", lambda *_: self.aplicacion._abrir_ajustes())
         cabecera.pack_end(ajustes)
 
-        self.status = etiqueta("Listo. Todos los datos se guardan en este equipo.", "status")
+        texto_estado = (
+            licencia.texto_estado() if licencia.es_edicion_paga()
+            else "Listo. Todos los datos se guardan en este equipo."
+        )
+        self.status = etiqueta(texto_estado, "status")
         barra_estado = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         barra_estado.set_border_width(6)
         barra_estado.pack_start(self.status, False, False, 0)

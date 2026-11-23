@@ -11,7 +11,7 @@
   "year": "2026",
   "status": "wip",
   "platform": "Linux y Windows (en preparación).",
-  "roadmap": "El paquete Windows se empaqueta con MSYS2 + PyInstaller y un instalador visual; queda pendiente la primera release pública y la licencia de esa edición.",
+  "roadmap": "Windows se empaqueta con MSYS2 + PyInstaller, instalador visual y licencia por suscripción offline; queda pendiente la primera release pública y conectar la venta de claves.",
   "url": "/thc%20contabilidad/",
   "repo": "https://github.com/thczt-dev/thc-contabilidad"
 }

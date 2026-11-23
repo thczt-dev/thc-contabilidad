@@ -85,6 +85,8 @@ ocultos = [
     "gi.repository",
     "cairo",
     "cairo._cairo",
+    "cryptography",
+    "cryptography.hazmat.primitives.asymmetric.ed25519",
 ]
 
 excluidos = [

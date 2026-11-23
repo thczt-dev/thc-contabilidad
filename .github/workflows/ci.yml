@@ -45,6 +45,7 @@ jobs:
             mingw-w64-x86_64-python-cairo
             mingw-w64-x86_64-pyinstaller
             mingw-w64-x86_64-pyinstaller-hooks-contrib
+            mingw-w64-x86_64-python-cryptography
 
       - name: Instalar Inno Setup
         run: choco install innosetup --no-progress -y

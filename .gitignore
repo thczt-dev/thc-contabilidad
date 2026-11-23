@@ -25,6 +25,12 @@ datos/*.json
 .env.*
 !.env.example
 
+# Licencias del editor (NUNCA subir la privada ni el registro de activaciones)
+licencias/private_key.pem
+licencias/activaciones.json
+licencias/salida/
+*.lic.json
+
 # Editores y sistema
 .idea/
 .vscode/

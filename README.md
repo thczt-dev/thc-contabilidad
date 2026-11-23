@@ -37,6 +37,12 @@ confirmación al eliminar; esos valores se guardan en
 Todavía no hay release pública de Windows: el instalador se genera en GitHub
 Actions como artefacto de CI hasta que se publique la primera versión.
 
+La edición Windows será de **suscripción**: se activa con un archivo firmado,
+sin conexión a internet. En **Licencia...** verás el estado de tu suscripción,
+los días restantes y el código de máquina que debes enviar junto con tu clave
+para recibir el archivo de activación. La edición Linux sigue siendo gratuita y
+no pide licencia.
+
 ## Requisitos
 
 - Linux con GTK 3 y Python 3.11 o superior.

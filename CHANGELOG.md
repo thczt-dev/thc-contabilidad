@@ -20,6 +20,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Instrucciones y detección automática de dependencias para Arch Linux, Manjaro
   y otras distros base Arch (`gtk3`, `python-gobject`, `python-cairo`,
   `adwaita-icon-theme`, `desktop-file-utils`).
+- Sistema de licencias para la edición Windows de pago: suscripción con fecha
+  de caducidad, activación mediante archivo firmado con Ed25519, huella de equipo
+  y límite automático de activaciones por clave.
+- Diálogo **Licencia...** en la app Windows con estado, días restantes, código
+  de máquina y carga del archivo de activación.
+- Herramienta `licencias/generar.py` para crear claves, emitir licencias y
+  consultar el registro de activaciones.
 
 ### Cambiado
 

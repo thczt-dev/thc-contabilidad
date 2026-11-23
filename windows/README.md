@@ -14,7 +14,8 @@ en local.
      mingw-w64-x86_64-python-gobject \
      mingw-w64-x86_64-python-cairo \
      mingw-w64-x86_64-pyinstaller \
-     mingw-w64-x86_64-pyinstaller-hooks-contrib
+     mingw-w64-x86_64-pyinstaller-hooks-contrib \
+     mingw-w64-x86_64-python-cryptography
    ```
 
 2. [Inno Setup 6](https://jrsoftware.org/isinfo.php) para crear el instalador.
@@ -58,5 +59,17 @@ Solo escribe `config.json` si no existe o si se marca la tarea *Restablecer
 preferencias iniciales*. La base de datos nunca se reemplaza al reinstalar ni
 se borra al desinstalar.
 
-La futura activación por licencia de Windows se añadirá a este mismo
-instalador; todavía no hay ningún sistema de licencias en esta rama.
+## Licencias
+
+La edición empaquetada exige licencia; la ejecución desde código fuente en
+Linux no. El flujo es:
+
+1. El usuario abre **Licencia...** en el menú y copia su código de máquina.
+2. Con su clave y ese código, ejecutas
+   `python licencias/generar.py activar --clave ... --codigo ...`.
+3. Envías el `license.json` generado; el usuario lo carga desde el diálogo.
+
+El registro `licencias/activaciones.json` controla el máximo de equipos por
+clave. La clave privada `licencias/private_key.pem` y ese registro están en
+`.gitignore`: **no los subas**. Si regeneras las claves, actualiza
+`CLAVE_PUBLICA_PEM` en `thc_contabilidad/licencia.py` y recompila.
