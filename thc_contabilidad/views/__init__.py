@@ -7,8 +7,10 @@ from .calendario import CalendarioView
 from .cobros import CobrosView
 from .contactos import ContactosView
 from .reportes import ReportesView
+from .ajustes import AjustesDialog
 
 __all__ = [
+    "AjustesDialog",
     "ResumenView",
     "MovimientosView",
     "ProyectosView",

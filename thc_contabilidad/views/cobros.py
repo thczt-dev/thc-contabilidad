@@ -10,6 +10,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
 from .. import theme  # noqa: E402
+from ..i18n import tr, tr_etiqueta_precio  # noqa: E402
 from ..ui_helpers import (  # noqa: E402
     DateEntry, boton, combo, confirmar, crear_tabla, etiqueta, marco_con_titulo,
     mostrar_error, mostrar_info, texto_combo,
@@ -29,6 +30,17 @@ def _scroll(widget, alto: int = 180) -> Gtk.ScrolledWindow:
     scroll.add(widget)
     scroll.set_size_request(-1, alto)
     return scroll
+
+
+def _pestana(titulo: str, icono: str) -> Gtk.Box:
+    """Etiqueta de pestaña con icono y texto traducido."""
+    caja = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    caja.pack_start(
+        Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.MENU), False, False, 0
+    )
+    caja.pack_start(etiqueta(titulo, "tab-label"), False, False, 0)
+    caja.show_all()
+    return caja
 
 
 class CobrosView(Gtk.Box):
@@ -107,7 +119,7 @@ class CobrosView(Gtk.Box):
         self.prod_nombre = Gtk.Entry()
         self.prod_nombre.set_placeholder_text("Ej. Café americano")
         self.prod_precio = Gtk.Entry()
-        self.prod_precio.set_placeholder_text("Precio COP")
+        self.prod_precio.set_placeholder_text(tr("Precio"))
         self.prod_tipo = combo(TIPOS_PRODUCTO)
         self.prod_categoria = Gtk.Entry()
         self.prod_categoria.set_placeholder_text("Categoría")
@@ -252,7 +264,9 @@ class CobrosView(Gtk.Box):
         caja_car.pack_start(self.cobrar_boton, False, False, 0)
 
         pagina.pack_start(marco_car, True, True, 0)
-        self.sub.append_page(pagina, etiqueta("Cobrar"))
+        self.sub.append_page(
+            pagina, _pestana("Cobrar", "accessories-calculator-symbolic")
+        )
 
     def _construir_ventas(self):
         pagina = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -304,7 +318,9 @@ class CobrosView(Gtk.Box):
         self.tree_ventas, self.modelo_ventas = crear_tabla(columnas, tipos_extra=(int,))
         self.tree_ventas.connect("row-activated", lambda *_: self._detalle_venta())
         pagina.pack_start(_scroll(self.tree_ventas, 320), True, True, 0)
-        self.sub.append_page(pagina, etiqueta("Ventas"))
+        self.sub.append_page(
+            pagina, _pestana("Ventas", "x-office-spreadsheet-symbolic")
+        )
 
     # ------------------------------------------------------------------ recarga
 
@@ -342,7 +358,7 @@ class CobrosView(Gtk.Box):
             nombre.set_line_wrap(True)
             texto_precio = " ".join(
                 parte for parte in (
-                    (producto.get("precio_etiqueta") or "").strip(),
+                    tr_etiqueta_precio((producto.get("precio_etiqueta") or "").strip()),
                     formatear_monto(producto["precio_cents"]),
                 ) if parte
             )
@@ -458,7 +474,7 @@ class CobrosView(Gtk.Box):
         return self._centavos(self.desc_valor.get_text())
 
     def _tipo_descuento_cambiado(self):
-        texto = self.desc_tipo.get_active_text() or "%"
+        texto = texto_combo(self.desc_tipo) or "%"
         self.desc_valor.set_placeholder_text(
             "Ej. 10" if texto == "%" else "Ej. 5000"
         )

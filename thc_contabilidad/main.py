@@ -8,15 +8,15 @@ import sys
 import gi
 
 gi.require_version("Gtk", "3.0")
-gi.require_version("Gdk", "3.0")
 gi.require_version("Gio", "2.0")
-from gi.repository import Gdk, Gio, Gtk  # noqa: E402
+from gi.repository import Gio, Gtk  # noqa: E402
 
-from . import __version__, theme  # noqa: E402
+from . import __version__, config, theme  # noqa: E402
 from .db import Database  # noqa: E402
+from .i18n import tr  # noqa: E402
 from .ui_helpers import boton, etiqueta  # noqa: E402
 from .views import (  # noqa: E402
-    CalendarioView, CobrosView, ContactosView, MovimientosView,
+    AjustesDialog, CalendarioView, CobrosView, ContactosView, MovimientosView,
     ProyectosView, ReportesView, ResumenView,
 )
 
@@ -37,16 +37,21 @@ PAGINA_COBROS = 4
 PAGINA_CONTACTOS = 5
 PAGINA_REPORTES = 6
 
+# Icono symbolic de cada pestaña (todos presentes en los temas de iconos de GTK).
+PESTANAS = (
+    ("Resumen", "view-grid-symbolic", ResumenView),
+    ("Movimientos", "view-list-symbolic", MovimientosView),
+    ("Proyectos", "folder-symbolic", ProyectosView),
+    ("Calendario", "office-calendar-symbolic", CalendarioView),
+    ("Cobros", "accessories-calculator-symbolic", CobrosView),
+    ("Contactos", "address-book-new-symbolic", ContactosView),
+    ("Reportes", "x-office-spreadsheet-symbolic", ReportesView),
+)
+
+
 def cargar_estilos():
-    configuracion = Gtk.Settings.get_default()
-    if configuracion is not None:
-        configuracion.set_property("gtk-application-prefer-dark-theme", True)
-    proveedor = Gtk.CssProvider()
-    proveedor.load_from_data(theme.CSS)
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(), proveedor,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-    )
+    """Aplica el tema elegido en Ajustes (oscuro, claro o sistema)."""
+    theme.aplicar_tema(config.get("tema"), config.get("tamano_texto"))
 
 
 class ThcApplication(Gtk.Application):
@@ -68,6 +73,7 @@ class ThcApplication(Gtk.Application):
             ("calendario", self._ir_calendario),
             ("cobro", self._nuevo_cobro),
             ("exportar", self._exportar),
+            ("ajustes", self._abrir_ajustes),
             ("acerca-de", self._acerca_de),
             ("salir", self._salir),
         )
@@ -81,6 +87,7 @@ class ThcApplication(Gtk.Application):
         self.set_accels_for_action("app.calendario", ["<Control><Shift>c"])
         self.set_accels_for_action("app.cobro", ["<Control><Shift>v"])
         self.set_accels_for_action("app.exportar", ["<Control>e"])
+        self.set_accels_for_action("app.ajustes", ["<Control>comma"])
         self.set_accels_for_action("app.salir", ["<Control>q"])
 
     def do_activate(self):
@@ -113,6 +120,36 @@ class ThcApplication(Gtk.Application):
             self.window.ir_a(self.window.reportes)
             self.window.reportes._exportar("movimientos")
 
+    def _abrir_ajustes(self, _accion=None, _parametro=None):
+        if not self.window:
+            return
+        dialogo = AjustesDialog(self.window)
+        respuesta = dialogo.run()
+        cambios = dict(dialogo.valores) if respuesta == Gtk.ResponseType.OK else {}
+        dialogo.destroy()
+        if not cambios:
+            return
+
+        cambia_idioma = cambios.get("idioma") != config.get("idioma")
+        config.guardar(cambios)
+        theme.aplicar_tema(config.get("tema"), config.get("tamano_texto"))
+        if cambia_idioma:
+            self.recargar_interfaz()
+        else:
+            self.window.set_status(tr("Preferencias guardadas"))
+
+    def recargar_interfaz(self):
+        """Reconstruye la ventana para que el nuevo idioma se vea en todas partes."""
+        anterior = self.window
+        pagina = anterior.notebook.get_current_page() if anterior else 0
+        if anterior is not None:
+            anterior.destroy()
+        self.window = MainWindow(self, self.db)
+        if 0 <= pagina < self.window.notebook.get_n_pages():
+            self.window.notebook.set_current_page(pagina)
+        self.window.present()
+        self.window.set_status(tr("Preferencias guardadas"))
+
     def _acerca_de(self, _accion, _parametro):
         if not self.window:
             return
@@ -120,8 +157,8 @@ class ThcApplication(Gtk.Application):
         dialogo.set_program_name("THC Contabilidad")
         dialogo.set_version(__version__)
         dialogo.set_comments(
-            "Gestión sencilla de ingresos, gastos, proyectos, calendario, cobros, contactos y reportes.\n"
-            "Datos guardados localmente en SQLite."
+            tr("Gestión sencilla de ingresos, gastos, proyectos, calendario, cobros, contactos y reportes.")
+            + "\n" + tr("Datos guardados localmente en SQLite.")
         )
         dialogo.set_authors(["ThcDev"])
         dialogo.set_website_label("ThcDev")
@@ -136,6 +173,7 @@ class ThcApplication(Gtk.Application):
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, aplicacion: ThcApplication, db: Database):
         super().__init__(application=aplicacion, title="THC Contabilidad")
+        self.aplicacion = aplicacion
         self.db = db
         self.set_default_size(1220, 820)
         self.set_position(Gtk.WindowPosition.CENTER)
@@ -144,7 +182,7 @@ class MainWindow(Gtk.ApplicationWindow):
         cabecera = Gtk.HeaderBar()
         cabecera.set_show_close_button(True)
         cabecera.props.title = "THC Contabilidad"
-        cabecera.props.subtitle = "Ingresos, gastos y proyectos en un solo lugar"
+        cabecera.props.subtitle = tr("Ingresos, gastos y proyectos en un solo lugar")
         self.set_titlebar(cabecera)
 
         nuevo_mov = boton("list-add-symbolic", "Movimiento", "Nuevo ingreso o gasto (Ctrl+N)")
@@ -161,42 +199,44 @@ class MainWindow(Gtk.ApplicationWindow):
         cabecera.pack_start(cobrar)
 
         menu = Gio.Menu()
-        menu.append("Nuevo cobro (POS)", "app.cobro")
-        menu.append("Ver calendario", "app.calendario")
-        menu.append("Exportar movimientos a CSV", "app.exportar")
-        menu.append("Acerca de THC Contabilidad", "app.acerca-de")
-        menu.append("Salir", "app.salir")
+        menu.append(tr("Nuevo cobro (POS)"), "app.cobro")
+        menu.append(tr("Ver calendario"), "app.calendario")
+        menu.append(tr("Exportar movimientos a CSV"), "app.exportar")
+        menu.append(tr("Ajustes"), "app.ajustes")
+        menu.append(tr("Acerca de THC Contabilidad"), "app.acerca-de")
+        menu.append(tr("Salir"), "app.salir")
         boton_menu = Gtk.MenuButton()
         boton_menu.set_image(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
         boton_menu.set_menu_model(menu)
-        boton_menu.set_tooltip_text("Menú")
+        boton_menu.set_tooltip_text(tr("Menú"))
         cabecera.pack_end(boton_menu)
+
+        ajustes = Gtk.Button.new_from_icon_name(
+            "preferences-system-symbolic", Gtk.IconSize.BUTTON
+        )
+        ajustes.set_tooltip_text(tr("Ajustes") + " (Ctrl+,)")
+        ajustes.connect("clicked", lambda *_: self.aplicacion._abrir_ajustes())
+        cabecera.pack_end(ajustes)
 
         self.status = etiqueta("Listo. Todos los datos se guardan en este equipo.", "status")
         barra_estado = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         barra_estado.set_border_width(6)
         barra_estado.pack_start(self.status, False, False, 0)
 
-        self.resumen = ResumenView(self)
-        self.movimientos = MovimientosView(self)
-        self.proyectos = ProyectosView(self)
-        self.calendario = CalendarioView(self)
-        self.cobros = CobrosView(self)
-        self.contactos = ContactosView(self)
-        self.reportes = ReportesView(self)
-
         self.notebook = Gtk.Notebook()
         self.notebook.set_tab_pos(Gtk.PositionType.TOP)
-        for titulo, vista in (
-            ("Resumen", self.resumen),
-            ("Movimientos", self.movimientos),
-            ("Proyectos", self.proyectos),
-            ("Calendario", self.calendario),
-            ("Cobros", self.cobros),
-            ("Contactos", self.contactos),
-            ("Reportes", self.reportes),
-        ):
-            self.notebook.append_page(vista, etiqueta(titulo))
+        for titulo, icono, clase in PESTANAS:
+            vista = clase(self)
+            setattr(self, titulo.lower(), vista)
+            etiqueta_pestana = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL, spacing=6
+            )
+            etiqueta_pestana.pack_start(
+                Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.MENU), False, False, 0
+            )
+            etiqueta_pestana.pack_start(etiqueta(titulo, "tab-label"), False, False, 0)
+            etiqueta_pestana.show_all()
+            self.notebook.append_page(vista, etiqueta_pestana)
         self.notebook.connect("switch-page", self._al_cambiar_pagina)
 
         contenedor = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)

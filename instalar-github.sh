@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Instalador de THC Contabilidad directamente desde GitHub.
-# Uso: bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.0/instalar-github.sh)
+# Uso: bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.1/instalar-github.sh)
 # También puedes ejecutarlo desde un clon: ./instalar-github.sh
 
 set -euo pipefail
 
 REPO="${THC_REPO_URL:-https://github.com/thczt-dev/thc-contabilidad.git}"
-VERSION="${THC_VERSION:-v1.1.0}"
+VERSION="${THC_VERSION:-v1.1.1}"
 DEST="${THC_INSTALL_DIR:-$HOME/.local/share/thc-contabilidad}"
 
 echo "============================================"

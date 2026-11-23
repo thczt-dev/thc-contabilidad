@@ -84,7 +84,11 @@ def a_centros(texto: str) -> int:
 
 
 def formatear_monto(centavos: int | None, simbolo: bool = True) -> str:
-    """Devuelve un monto en formato colombiano: $ 1.250.000."""
+    """Devuelve un monto con el formato de moneda elegido en Ajustes.
+
+    Los importes siguen guardándose como enteros en la unidad menor (centavos);
+    cambiar de moneda solo cambia la presentación, nunca convierte valores.
+    """
     if centavos is None:
         centavos = 0
     signo = "-" if centavos < 0 else ""
@@ -92,7 +96,12 @@ def formatear_monto(centavos: int | None, simbolo: bool = True) -> str:
     texto = f"{signo}{entero:,}".replace(",", ".")
     if decimal:
         texto += f",{decimal:02d}"
-    return f"{SIMBOLO} {texto}" if simbolo else texto
+    if not simbolo:
+        return texto
+    from .config import formatear_texto, moneda_actual  # importación diferida
+
+    codigo, _simbolo, formato = moneda_actual()
+    return formatear_texto(texto, codigo, formato)
 
 
 def formatear_porcentaje(valor: float) -> str:

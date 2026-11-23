@@ -1,6 +1,6 @@
 # THC Contabilidad
 
-![Versión](https://img.shields.io/badge/versión-1.1.0-blue)
+![Versión](https://img.shields.io/badge/versión-1.1.1-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Plataforma](https://img.shields.io/badge/plataforma-Linux-orange)
 
@@ -9,16 +9,20 @@ Programa de escritorio nativo para Linux que permite llevar un control sencillo 
 reportes**. Todo funciona sin internet: la información se guarda en una base de
 datos SQLite local.
 
-Moneda configurada: **peso colombiano (COP)**.
+Moneda por defecto: **peso colombiano (COP)**. Puedes cambiarla desde
+**Ajustes** (solo cambia la presentación; los importes siguen guardados en
+centavos y nunca se convierten).
 
-Interfaz: **modo oscuro moderno y minimalista**, con acento en azul pastel y
-espaciado amplio. Los colores están centralizados en `thc_contabilidad/theme.py`,
-así que el aspecto no depende del tema del sistema.
+Interfaz: **modo oscuro moderno y minimalista**, con acento en azul pastel
+(`#8ab4ff`) y espaciado amplio. Desde **Ajustes** puedes elegir también el tema
+claro o seguir el tema del sistema, cambiar el tamaño del texto y elegir entre
+10 idiomas. Los colores están centralizados en `thc_contabilidad/theme.py`.
 
 ## Descargas
 
-La versión estable es **v1.1.0** (21 de noviembre de 2026), que añade el
-punto de cobro. La v1.0.0 sigue disponible para quien no necesite POS.
+La versión estable es **v1.1.1** (23 de noviembre de 2026): interfaz ordenada,
+menú de Ajustes e idiomas. v1.1.0 añadió el punto de cobro y la v1.0.0 sigue
+disponible para quien no necesite POS.
 Los archivos de cada lanzamiento se publican en
 [GitHub Releases](https://github.com/thczt-dev/thc-contabilidad/releases).
 El historial de cambios está en [`CHANGELOG.md`](CHANGELOG.md).
@@ -43,7 +47,7 @@ Copia y pega esta línea en la terminal. Descarga el instalador, clona el
 repositorio, comprueba las dependencias y crea el acceso directo:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.0/instalar-github.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.1/instalar-github.sh)
 ```
 
 El instalador guarda el código en `~/.local/share/thc-contabilidad`. Cuando
@@ -52,7 +56,7 @@ vuelvas a ejecutarlo, actualiza la instalación con `git pull`.
 ### Opción B: clonar manualmente
 
 ```bash
-git clone --branch v1.1.0 https://github.com/thczt-dev/thc-contabilidad.git
+git clone --branch v1.1.1 https://github.com/thczt-dev/thc-contabilidad.git
 cd thc-contabilidad
 ./instalar.sh
 ```
@@ -73,7 +77,7 @@ sudo apt install python3-gi gir1.2-gtk-3.0 python3-cairo
 | Variable | Para qué | Valor por defecto |
 |---|---|---|
 | `THC_REPO_URL` | URL del repositorio a clonar | `https://github.com/thczt-dev/thc-contabilidad.git` |
-| `THC_VERSION` | Etiqueta a instalar | `v1.1.0` |
+| `THC_VERSION` | Etiqueta a instalar | `v1.1.1` |
 | `THC_INSTALL_DIR` | Carpeta de destino | `~/.local/share/thc-contabilidad` |
 | `THC_CONTABILIDAD_DB` | Ruta de la base de datos | `datos/contabilidad.db` dentro del proyecto |
 
@@ -81,7 +85,7 @@ Ejemplo:
 
 ```bash
 THC_INSTALL_DIR="$HOME/Apps/thc-contabilidad" \
-bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.0/instalar-github.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.1.1/instalar-github.sh)
 ```
 
 ## Uso
@@ -92,6 +96,23 @@ Abre el programa de una de estas formas:
 - Desde la carpeta del proyecto: `./thc-contabilidad`
 - Desde la terminal: `python3 -m thc_contabilidad.main`
 - Para consultar la versión: `./thc-contabilidad --version`
+
+## Ajustes
+
+Pulsa el icono de engranaje de la cabecera (o `Ctrl + ,`) para personalizar la
+app. Todo se guarda en `datos/config.json` y **no modifica la contabilidad**:
+
+| Sección | Opciones |
+|---|---|
+| **Apariencia** | Tema oscuro, claro o según el sistema; tamaño del texto pequeño, normal o grande. |
+| **Idioma** | Español, inglés, alemán, ruso, chino, japonés, francés, portugués, italiano y coreano. |
+| **Moneda** | COP, USD, EUR, GBP, MXN, ARS, BRL, CLP, PEN y JPY, con formato de símbolo, código o sin símbolo y vista previa. |
+| **Opciones generales** | Confirmación al eliminar y botón para restablecer preferencias. |
+
+Cambiar de idioma reconstruye la ventana para que todos los textos se vean en
+el idioma elegido. El tema y la moneda se aplican al guardar. Los importes
+siempre se almacenan como enteros en centavos: elegir otra moneda **no** convierte
+los valores, solo cambia cómo se muestran.
 
 ## Módulos
 
@@ -112,6 +133,7 @@ Abre el programa de una de estas formas:
 - `Ctrl + Shift + C` — abrir calendario
 - `Ctrl + Shift + V` — nuevo cobro (POS)
 - `Ctrl + E` — exportar movimientos a CSV
+- `Ctrl + ,` — abrir Ajustes
 - `Ctrl + Q` — salir
 
 ## Punto de cobro (POS)
@@ -172,8 +194,10 @@ datos/contabilidad.db
 ```
 
 Ese archivo **no se sube a GitHub** (está en `.gitignore`) porque contiene
-información real. Para cambiar la ubicación, define la variable de entorno
-`THC_CONTABILIDAD_DB` con la ruta deseada antes de iniciar la app.
+información real. Las preferencias de Ajustes viven aparte, en
+`datos/config.json`, que tampoco se sube. Para cambiar la ubicación de la base
+de datos, define `THC_CONTABILIDAD_DB` antes de iniciar la app; para las
+preferencias, `THC_CONTABILIDAD_CONFIG`.
 
 Para hacer una copia de seguridad, basta con copiar ese archivo mientras la
 aplicación esté cerrada. Los CSV exportados se guardan con codificación
@@ -187,6 +211,7 @@ thc-contabilidad/
 ├── CHANGELOG.md              # historial de versiones
 ├── RELEASE_NOTES.md           # notas de la release v1.0.0
 ├── RELEASE_NOTES_v1.1.0.md    # notas de la release v1.1.0
+├── RELEASE_NOTES_v1.1.1.md    # notas de la release v1.1.1
 ├── LICENSE                   # MIT
 ├── thc-contabilidad          # lanzador ejecutable
 ├── thc-contabilidad.desktop  # plantilla del acceso directo
@@ -195,23 +220,29 @@ thc-contabilidad/
 ├── instalar-github.sh        # clona, instala dependencias y crea el lanzador
 ├── publicar.sh               # crea el repo y publica la release con gh CLI
 ├── proyecto.json             # metadatos para el portafolio web
-├── datos/                    # base de datos SQLite (se crea sola)
-│   └── .gitkeep
+├── datos/                    # datos locales (se crean solos, no se suben)
+│   ├── .gitkeep
+│   ├── contabilidad.db       # base de datos SQLite
+│   └── config.json           # preferencias: idioma, tema, moneda, etc.
 └── thc_contabilidad/
     ├── __init__.py           # versión del paquete
     ├── main.py               # aplicación y ventana principal
     ├── db.py                 # esquema y consultas SQLite
-    ├── theme.py              # paleta oscura y estilos GTK
+    ├── config.py             # preferencias y definiciones de tema/moneda/idioma
+    ├── i18n.py               # traducción con respaldo al español
+    ├── i18n_data.py          # textos traducidos a 10 idiomas
+    ├── theme.py              # paletas oscura/clara y estilos GTK
     ├── utils.py              # formatos, montos y fechas
     ├── ui_helpers.py         # widgets reutilizables
-    └── views/                # pestañas de la interfaz
+    └── views/                # pestañas y diálogos de la interfaz
         ├── resumen.py
         ├── movimientos.py
         ├── proyectos.py
         ├── calendario.py     # vista mensual y detalle por día
         ├── cobros.py         # POS, catálogo editable, descuentos, impuestos y ventas
         ├── contactos.py
-        └── reportes.py
+        ├── reportes.py
+        └── ajustes.py        # preferencias personales
 ```
 
 ## Desarrollo
@@ -230,7 +261,7 @@ Con GitHub CLI autenticado (`gh auth login`), un solo comando sube el código,
 empuja el tag y publica la release con las notas:
 
 ```bash
-./publicar.sh                       # v1.1.0 por defecto
+./publicar.sh                       # v1.1.1 por defecto
 GH_VERSION=v1.2.0 ./publicar.sh     # otra versión, si existe su tag
 ```
 

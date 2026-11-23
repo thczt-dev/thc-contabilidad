@@ -4,6 +4,38 @@ Todas las versiones notables de THC Contabilidad se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.1] - 2026-11-23
+
+Versión de pulido visual y personalización. No incorpora funciones de negocio
+nuevas: la contabilidad, la base de datos y los cálculos siguen siendo los mismos.
+
+### Añadido
+
+- Menú **Ajustes** en la cabecera y en el menú principal (atajo `Ctrl + ,`), con
+  preferencias guardadas en `datos/config.json`, separadas de la base de datos.
+- **Idioma**: español, inglés, alemán, ruso, chino, japonés, francés, portugués,
+  italiano y coreano. La interfaz se reconstruye al cambiar de idioma y los
+  valores internos de los combos siguen siendo canónicos.
+- **Apariencia**: temas oscuro (predeterminado, con acento azul pastel), claro y
+  «sistema», además de tres tamaños de texto.
+- **Moneda**: selector de 10 monedas y formato de símbolo, código o sin símbolo,
+  con vista previa. Solo cambia la presentación: los importes siguen guardados
+  como enteros en centavos y no se convierten.
+- **Opciones generales**: confirmación al eliminar y botón para restablecer
+  preferencias.
+- Iconos en las pestañas principales y en las secciones **Cobrar** / **Ventas**.
+
+### Cambiado
+
+- Encabezado más claro y agrupado, pestañas con icono, panels y tarjetas con
+  bordes suaves, y espaciado más consistente en todas las vistas.
+- Los temas se generan desde paletas centralizadas y se aplican en caliente al
+  guardar Ajustes, sin reiniciar la app.
+- Etiquetas de precio del catálogo («Desde», «Adicional desde», «por producto»)
+  traducidas sin tocar los valores guardados.
+
+[1.1.1]: https://github.com/thczt-dev/thc-contabilidad/releases/tag/v1.1.1
+
 ## [1.1.0] - 2026-11-21
 
 ### Añadido

@@ -11,6 +11,7 @@ datos/*.db
 datos/*.db-*
 datos/*.sqlite
 datos/*.sqlite-*
+datos/*.json
 *.csv
 
 # Entornos y secretos

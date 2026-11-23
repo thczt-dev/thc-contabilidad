@@ -10,6 +10,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Gtk, Pango  # noqa: E402
 
+from .i18n import tr  # noqa: E402
 from .utils import validar_fecha  # noqa: E402
 
 
@@ -27,7 +28,7 @@ class DateEntry(Gtk.Box):
 
         boton = Gtk.Button()
         boton.set_image(Gtk.Image.new_from_icon_name("calendar-symbolic", Gtk.IconSize.BUTTON))
-        boton.set_tooltip_text("Elegir fecha")
+        boton.set_tooltip_text(tr("Elegir fecha"))
         boton.connect("clicked", self._abrir)
         self.pack_start(boton, False, False, 0)
 
@@ -62,37 +63,55 @@ class DateEntry(Gtk.Box):
         return validar_fecha(self.get_text(), obligatorio)
 
 
-def combo(opciones, activo=None, editable=False) -> Gtk.ComboBoxText:
-    """Crea un ComboBoxText, opcionalmente con texto libre."""
+def combo(opciones, activo=None, editable=False, valores=None) -> Gtk.ComboBoxText:
+    """Crea un ComboBoxText traducido, opcionalmente con texto libre.
+
+    `opciones` son los valores internos (los que se guardan en la BD); se
+    muestran traducidos. `valores` permite mostrar etiquetas distintas a los
+    valores, por ejemplo los nombres de los idiomas.
+    """
     widget = Gtk.ComboBoxText.new_with_entry() if editable else Gtk.ComboBoxText()
-    for opcion in opciones:
-        widget.append_text(opcion)
+    visibles = [tr(str(opcion)) for opcion in opciones]
+    for texto in visibles:
+        widget.append_text(texto)
+    # PyGObject no permite GObject.set_data(): se guardan como atributos Python.
+    widget.thc_opciones = tuple(opciones)
+    widget.thc_visibles = tuple(visibles)
+    widget.thc_valores = tuple(valores) if valores is not None else tuple(opciones)
     if activo:
         if editable:
-            widget.get_child().set_text(str(activo))
+            texto = (visibles[list(opciones).index(activo)]
+                     if activo in opciones else str(activo))
+            widget.get_child().set_text(texto)
         elif activo in opciones:
-            widget.set_active(opciones.index(activo))
+            widget.set_active(list(opciones).index(activo))
     if not activo and not editable and opciones:
         widget.set_active(0)
     return widget
 
 
 def texto_combo(widget) -> str:
-    """Lee el texto de un combo, sea editable o no.
-
-    En los ComboBoxText editables el hijo es un Gtk.Entry; en los normales es
-    un Gtk.CellView, que no tiene get_text().
-    """
+    """Lee el valor interno de un combo (no su texto traducido)."""
     child = widget.get_child()
-    if isinstance(child, Gtk.Entry):
-        return child.get_text().strip()
-    return (widget.get_active_text() or "").strip()
+    texto = (child.get_text().strip() if isinstance(child, Gtk.Entry)
+             else (widget.get_active_text() or "").strip())
+    visibles = getattr(widget, "thc_visibles", ())
+    valores = getattr(widget, "thc_valores", ())
+    if texto in visibles and len(visibles) == len(valores):
+        return str(valores[visibles.index(texto)])
+    return texto
 
 
 def _celda(_columna, celda, modelo, iterador, datos):
     indice, formato, color = datos
     valor = modelo.get_value(iterador, indice)
-    celda.props.text = formato(valor) if formato else str(valor or "")
+    if formato:
+        celda.props.text = formato(valor)
+    elif valor is None:
+        celda.props.text = ""
+    else:
+        # `str(valor or "")` convertiría el entero 0 en una celda vacía.
+        celda.props.text = tr(str(valor))
     if color:
         tono = color(valor)
         if tono:
@@ -105,15 +124,14 @@ def agregar_columna(
 ) -> Gtk.TreeViewColumn:
     renderer = Gtk.CellRendererText()
     renderer.set_property("ellipsize", Pango.EllipsizeMode.END)
-    columna = Gtk.TreeViewColumn(titulo, renderer, text=indice)
+    columna = Gtk.TreeViewColumn(tr(titulo), renderer, text=indice)
     if ancho:
         columna.set_min_width(ancho)
     columna.set_expand(expandir)
     columna.set_resizable(True)
     if orden is not None:
         columna.set_sort_column_id(orden)
-    if formato or color:
-        columna.set_cell_data_func(renderer, _celda, (indice, formato, color))
+    columna.set_cell_data_func(renderer, _celda, (indice, formato, color))
     tree.append_column(columna)
     return columna
 
@@ -141,16 +159,16 @@ def crear_tabla(
 
 
 def boton(icono: str, texto: str, tooltip: str = "") -> Gtk.Button:
-    widget = Gtk.Button(label=texto)
+    widget = Gtk.Button(label=tr(texto))
     widget.set_image(Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.BUTTON))
     widget.set_always_show_image(True)
     if tooltip:
-        widget.set_tooltip_text(tooltip)
+        widget.set_tooltip_text(tr(tooltip))
     return widget
 
 
 def etiqueta(texto: str, clase: str | None = None, xalign: float = 0.0) -> Gtk.Label:
-    widget = Gtk.Label(label=texto, xalign=xalign)
+    widget = Gtk.Label(label=tr(texto), xalign=xalign)
     if clase:
         widget.get_style_context().add_class(clase)
     return widget
@@ -181,13 +199,17 @@ def marco_con_titulo(titulo: str) -> tuple[Gtk.Frame, Gtk.Box]:
 
 
 def confirmar(parent, titulo: str, mensaje: str) -> bool:
+    from . import config  # importación diferida: Ajustes puede desactivar esto
+
+    if not config.get("confirmar_eliminar", True):
+        return True
     dialogo = Gtk.MessageDialog(
         parent, Gtk.DialogFlags.MODAL, Gtk.MessageType.QUESTION,
-        Gtk.ButtonsType.NONE, titulo,
+        Gtk.ButtonsType.NONE, tr(titulo),
     )
-    dialogo.format_secondary_text(mensaje)
-    dialogo.add_button("_Cancelar", Gtk.ResponseType.CANCEL)
-    aceptar = dialogo.add_button("_Eliminar", Gtk.ResponseType.YES)
+    dialogo.format_secondary_text(tr(mensaje))
+    dialogo.add_button("_" + tr("Cancelar"), Gtk.ResponseType.CANCEL)
+    aceptar = dialogo.add_button("_" + tr("Eliminar"), Gtk.ResponseType.YES)
     aceptar.get_style_context().add_class("destructive-action")
     respuesta = dialogo.run()
     dialogo.destroy()
@@ -197,9 +219,9 @@ def confirmar(parent, titulo: str, mensaje: str) -> bool:
 def mostrar_error(parent, mensaje: str, titulo: str = "No se pudo guardar"):
     dialogo = Gtk.MessageDialog(
         parent, Gtk.DialogFlags.MODAL, Gtk.MessageType.ERROR,
-        Gtk.ButtonsType.OK, titulo,
+        Gtk.ButtonsType.OK, tr(titulo),
     )
-    dialogo.format_secondary_text(mensaje)
+    dialogo.format_secondary_text(tr(mensaje))
     dialogo.run()
     dialogo.destroy()
 
@@ -207,8 +229,8 @@ def mostrar_error(parent, mensaje: str, titulo: str = "No se pudo guardar"):
 def mostrar_info(parent, mensaje: str, titulo: str = "Información"):
     dialogo = Gtk.MessageDialog(
         parent, Gtk.DialogFlags.MODAL, Gtk.MessageType.INFO,
-        Gtk.ButtonsType.OK, titulo,
+        Gtk.ButtonsType.OK, tr(titulo),
     )
-    dialogo.format_secondary_text(mensaje)
+    dialogo.format_secondary_text(tr(mensaje))
     dialogo.run()
     dialogo.destroy()
