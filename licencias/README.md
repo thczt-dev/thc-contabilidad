@@ -3,6 +3,27 @@
 Esta carpeta contiene las herramientas para emitir licencias de la edición
 Windows de pago. **No se distribuye con la app.**
 
+## Generador gráfico (sin terminal)
+
+En tu PC puedes hacer todo desde una ventana GTK:
+
+```bash
+./licencias/generador-licencias
+```
+
+O instalar el acceso directo «Generador de licencias THC» en el menú de
+aplicaciones y abrirlo desde ahí:
+
+```bash
+./licencias/instalar-generador.sh
+```
+
+La ventana tiene tres zonas: generar una clave (días y nº de equipos, con botón
+**Copiar clave**), emitir `license.json` pegando la clave y el código de máquina,
+y consultar las claves registradas con sus activaciones. Los archivos se guardan
+en `licencias/salida/` por defecto, y puedes cambiar la carpeta desde el propio
+diálogo.
+
 ## Archivos
 
 - `private_key.pem`: clave privada Ed25519. Nunca subirla.

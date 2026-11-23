@@ -27,6 +27,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   de máquina y carga del archivo de activación.
 - Herramienta `licencias/generar.py` para crear claves, emitir licencias y
   consultar el registro de activaciones.
+- Generador gráfico `licencias/generador_gui.py` con lanzador
+  `licencias/generador-licencias` e instalador de acceso directo
+  `licencias/instalar-generador.sh` para gestionar licencias sin terminal.
 
 ### Cambiado
 
