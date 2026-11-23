@@ -25,7 +25,8 @@ equipos por clave. Sin licencia activa la edición Windows no arranca.
 
 ## Linux
 
-Sin cambios funcionales respecto a v1.1.1. Puedes actualizar con:
+La contabilidad no cambia; se añade el asistente inicial de preferencias.
+Puedes actualizar con:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/thczt-dev/thc-contabilidad/v1.2.0/instalar-github.sh)
