@@ -19,7 +19,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, Gtk  # noqa: E402
 
-from . import config, licencia, theme  # noqa: E402
+from . import asistente, config, licencia, theme  # noqa: E402
 from .db import Database  # noqa: E402
 from .i18n import tr  # noqa: E402
 from .ui_helpers import boton, etiqueta  # noqa: E402
@@ -109,6 +109,9 @@ class ThcApplication(Gtk.Application):
 
     def do_activate(self):
         if self.window is None:
+            if asistente.debe_mostrarse():
+                asistente.mostrar()
+                cargar_estilos()
             self.db = Database(RUTA_DB)
             self.window = MainWindow(self, self.db)
         if not self._verificar_licencia():

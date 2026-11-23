@@ -3,7 +3,7 @@
 ; La base de datos NO se toca: se crea sola en esa misma carpeta al abrir.
 
 #define MyAppName "THC Contabilidad"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "ThcDev"
 #define MyAppExeName "thc-contabilidad.exe"
 #define MyAppDiagName "thc-contabilidad-diag.exe"

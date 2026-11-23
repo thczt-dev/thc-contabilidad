@@ -1,7 +1,9 @@
 # Compilación de Windows
 
-La versión de Windows se genera en GitHub Actions, pero también puedes hacerlo
-en local.
+El instalador de la versión 1.2.0 se publica en
+[GitHub Releases](https://github.com/thczt-dev/thc-contabilidad/releases/latest)
+como `THC-Contabilidad-1.2.0-Windows.exe`. La versión también se genera en
+GitHub Actions, y puedes compilarla en local.
 
 ## Requisitos
 
@@ -68,6 +70,10 @@ Linux no. El flujo es:
 2. Con su clave y ese código, ejecutas
    `python licencias/generar.py activar --clave ... --codigo ...`.
 3. Envías el `license.json` generado; el usuario lo carga desde el diálogo.
+
+También puedes hacerlo desde el generador gráfico del editor:
+`./licencias/generador-licencias` (o instala el acceso directo con
+`./licencias/instalar-generador.sh`).
 
 El registro `licencias/activaciones.json` controla el máximo de equipos por
 clave. La clave privada `licencias/private_key.pem` y ese registro están en

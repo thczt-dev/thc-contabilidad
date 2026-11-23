@@ -11,7 +11,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 REPO="${GH_REPO:-thc-contabilidad}"
 VISIBILIDAD="${GH_VISIBILITY:-public}"
-VERSION="${GH_VERSION:-v1.1.1}"
+VERSION="${GH_VERSION:-v1.2.0}"
 NOTAS="RELEASE_NOTES_${VERSION}.md"
 
 if [ ! -f "$NOTAS" ]; then

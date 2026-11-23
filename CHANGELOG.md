@@ -4,7 +4,10 @@ Todas las versiones notables de THC Contabilidad se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Sin publicar]
+## [1.2.0] - 2026-11-23
+
+Primera versión con edición Windows de pago. Linux sigue siendo gratuita y no
+pide licencia.
 
 ### Añadido
 
@@ -30,6 +33,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Generador gráfico `licencias/generador_gui.py` con lanzador
   `licencias/generador-licencias` e instalador de acceso directo
   `licencias/instalar-generador.sh` para gestionar licencias sin terminal.
+- Asistente gráfico de preferencias iniciales en Linux: se abre al terminar
+  `instalar.sh` (y por tanto el `curl`) y, si se omite, en el primer arranque.
+  Elige idioma, tema, tamaño del texto, moneda, formato y confirmación al
+  eliminar, y se puede volver a abrir con `python3 -m thc_contabilidad.asistente`.
 
 ### Cambiado
 
@@ -39,6 +46,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   teniendo prioridad.
 - `--version` funciona sin inicializar GTK y se añadió `--smoke-test` para
   verificar rutas, SQLite, recursos y GTK desde CI.
+- El instalador de Windows se publica como archivo de la release cuando se
+  empuja una etiqueta de versión.
+
+[1.2.0]: https://github.com/thczt-dev/thc-contabilidad/releases/tag/v1.2.0
 
 ## [1.1.1] - 2026-11-23
 

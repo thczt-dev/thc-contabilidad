@@ -1,7 +1,7 @@
 {
   "name": "THC Contabilidad",
-  "description": "App de escritorio para llevar ingresos, gastos, proyectos, cobros (POS), contactos y reportes sin internet. Funciona en Linux y la versión de Windows está en preparación.",
-  "tags": ["ESCRITORIO", "SIN INTERNET", "LINUX", "WINDOWS", "PUNTO DE VENTA", "EN CAMINO"],
+  "description": "App de escritorio para llevar ingresos, gastos, proyectos, cobros (POS), contactos y reportes sin internet. Disponible para Linux y Windows, con instalador visual y licencia por suscripción offline en Windows.",
+  "tags": ["ESCRITORIO", "SIN INTERNET", "LINUX", "WINDOWS", "PUNTO DE VENTA", "SUSCRIPCIÓN"],
   "emoji": "📊",
   "category": "herramientas",
   "audience": "Negocios pequeños y personas que llevan sus cuentas sin depender de internet.",
@@ -9,9 +9,9 @@
   "solution": "Una app local con resumen, movimientos, proyectos, calendario, punto de cobro con catálogo editable, descuentos e impuestos, contactos y reportes. Todo se guarda en el computador.",
   "accent": "#c3d7ef",
   "year": "2026",
-  "status": "wip",
-  "platform": "Linux y Windows (en preparación).",
-  "roadmap": "Windows se empaqueta con MSYS2 + PyInstaller, instalador visual y licencia por suscripción offline; queda pendiente la primera release pública y conectar la venta de claves.",
+  "status": "active",
+  "platform": "Linux y Windows.",
+  "roadmap": "Windows ya se distribuye con instalador visual y licencia por suscripción offline; queda pendiente conectar la venta de claves y la renovación automatizada.",
   "url": "/thc%20contabilidad/",
   "repo": "https://github.com/thczt-dev/thc-contabilidad"
 }
