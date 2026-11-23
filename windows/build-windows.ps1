@@ -22,9 +22,9 @@ if (-not (Test-Path $Prefix)) {
     throw "No se encontró MSYS2 en $Prefix. Define -Prefix o MSYSTEM_PREFIX."
 }
 
-$Python = Join-Path $Prefix 'python.exe'
+$Python = Join-Path $Prefix 'bin\python.exe'
 if (-not (Test-Path $Python)) {
-    throw "No se encontró python.exe dentro de $Prefix."
+    throw "No se encontró python.exe en $Prefix\bin."
 }
 
 $env:MSYSTEM_PREFIX = $Prefix
@@ -59,7 +59,15 @@ try {
 
     Write-Host 'Generando loaders.cache relativo...'
     $Cache = Join-Path $Dist 'lib\gdk-pixbuf-2.0\2.10.0\loaders.cache'
-    & (Join-Path $Prefix 'bin\gdk-pixbuf-query-loaders.exe') @Loaders | Set-Content -Path $Cache -Encoding ascii
+    # Las rutas son relativas a $Dist: hay que ejecutar la herramienta desde la
+    # propia carpeta del paquete para que el caché resultante también lo sea.
+    Push-Location $Dist
+    try {
+        & (Join-Path $Prefix 'bin\gdk-pixbuf-query-loaders.exe') @Loaders | Set-Content -Path $Cache -Encoding ascii
+    }
+    finally {
+        Pop-Location
+    }
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo generar loaders.cache.' }
 
     Write-Host "Paquete listo en: $Dist"
