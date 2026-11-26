@@ -4,10 +4,35 @@ Todas las versiones notables de THC Contabilidad se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
-## [1.2.0] - 2026-11-23
+## [1.2.1] - 2026-11-26
 
-Primera versión con edición Windows de pago. Linux sigue siendo gratuita y no
-pide licencia.
+Versión gratuita también en Windows: se retiró por completo el sistema de
+suscripción y sus herramientas. Se añaden mejoras pequeñas de interfaz.
+
+### Añadido
+
+- Atajos `Ctrl + 1 … 7` para ir directamente a cada pestaña.
+- `Ctrl + F` enfoca el buscador de la pestaña **Movimientos**.
+- Diálogo **Atajos de teclado**, disponible desde el menú y con `Ctrl + F1`.
+
+### Cambiado
+
+- Windows es gratuita e igual que Linux: ya no hay licencia, activación,
+  límite de equipos ni control de caducidad.
+- La release se publica con la etiqueta `free4windows`; el título y el nombre
+  del instalador siguen tomando la versión 1.2.1 del paquete.
+- El asistente de instalación de Windows indica que la app es gratuita.
+
+### Eliminado
+
+- Módulo de verificación, diálogo de activación y carpeta `licencias/` con el
+  generador de claves y licencias.
+
+[1.2.1]: https://github.com/thczt-dev/thc-contabilidad/releases/tag/free4windows
+
+## 1.2.0 - 2026-11-23
+
+Primera versión con edición Windows.
 
 ### Añadido
 
@@ -23,16 +48,6 @@ pide licencia.
 - Instrucciones y detección automática de dependencias para Arch Linux, Manjaro
   y otras distros base Arch (`gtk3`, `python-gobject`, `python-cairo`,
   `adwaita-icon-theme`, `desktop-file-utils`).
-- Sistema de licencias para la edición Windows de pago: suscripción con fecha
-  de caducidad, activación mediante archivo firmado con Ed25519, huella de equipo
-  y límite automático de activaciones por clave.
-- Diálogo **Licencia...** en la app Windows con estado, días restantes, código
-  de máquina y carga del archivo de activación.
-- Herramienta `licencias/generar.py` para crear claves, emitir licencias y
-  consultar el registro de activaciones.
-- Generador gráfico `licencias/generador_gui.py` con lanzador
-  `licencias/generador-licencias` e instalador de acceso directo
-  `licencias/instalar-generador.sh` para gestionar licencias sin terminal.
 - Asistente gráfico de preferencias iniciales en Linux: se abre al terminar
   `instalar.sh` (y por tanto el `curl`) y, si se omite, en el primer arranque.
   Elige idioma, tema, tamaño del texto, moneda, formato y confirmación al
@@ -48,8 +63,6 @@ pide licencia.
   verificar rutas, SQLite, recursos y GTK desde CI.
 - El instalador de Windows se publica como archivo de la release cuando se
   empuja una etiqueta de versión.
-
-[1.2.0]: https://github.com/thczt-dev/thc-contabilidad/releases/tag/v1.2.0
 
 ## [1.1.1] - 2026-11-23
 

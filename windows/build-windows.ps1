@@ -43,9 +43,9 @@ $env:MSYSTEM_PREFIX = $Prefix
 $env:PATH = "$Prefix\bin;$env:PATH"
 Write-Host "Usando MSYS2: $Prefix"
 
-& $Python -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; import PyInstaller; import cryptography; print('Dependencias GTK, PyInstaller y cryptography OK')"
+& $Python -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; import PyInstaller; print('Dependencias GTK y PyInstaller OK')"
 if ($LASTEXITCODE -ne 0) {
-    throw 'Faltan dependencias. Instala gtk3, python-gobject, python-cairo, pyinstaller, pyinstaller-hooks-contrib y python-cryptography desde MSYS2.'
+    throw 'Faltan dependencias. Instala gtk3, python-gobject, python-cairo, pyinstaller y pyinstaller-hooks-contrib desde MSYS2.'
 }
 
 Push-Location $Proyecto

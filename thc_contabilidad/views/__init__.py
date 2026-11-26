@@ -8,11 +8,11 @@ from .cobros import CobrosView
 from .contactos import ContactosView
 from .reportes import ReportesView
 from .ajustes import AjustesDialog
-from .licencia import LicenciaDialog
+from .atajos import AtajosDialog
 
 __all__ = [
     "AjustesDialog",
-    "LicenciaDialog",
+    "AtajosDialog",
     "ResumenView",
     "MovimientosView",
     "ProyectosView",

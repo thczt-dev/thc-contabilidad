@@ -3,7 +3,7 @@
 ; La base de datos NO se toca: se crea sola en esa misma carpeta al abrir.
 
 #define MyAppName "THC Contabilidad"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.2.1"
 #define MyAppPublisher "ThcDev"
 #define MyAppExeName "thc-contabilidad.exe"
 #define MyAppDiagName "thc-contabilidad-diag.exe"
@@ -83,7 +83,7 @@ begin
   PaginaPreferencias := CreateCustomPage(
     wpReady,
     'Preferencias iniciales',
-    'Elige cómo quieres ver THC Contabilidad. Podrás cambiarlo después en Ajustes.'
+    'THC Contabilidad es gratuito y no pide licencia. Elige cómo quieres verlo; podrás cambiarlo después en Ajustes.'
   );
 
   CrearCombo(PaginaPreferencias.Surface, 10, 'Idioma de la aplicación:', CbIdioma);

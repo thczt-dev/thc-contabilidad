@@ -49,7 +49,6 @@ jobs:
             mingw-w64-x86_64-python-cairo
             mingw-w64-x86_64-pyinstaller
             mingw-w64-x86_64-pyinstaller-hooks-contrib
-            mingw-w64-x86_64-python-cryptography
 
       - name: Instalar Inno Setup
         run: choco install innosetup --no-progress -y
@@ -82,14 +81,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $version = $env:GITHUB_REF_NAME
-          $notas = "RELEASE_NOTES_{0}.md" -f $version
+          $etiqueta = $env:GITHUB_REF_NAME
+          # La etiqueta puede no ser la versión (p. ej. free4windows), así que
+          # el título y el nombre del instalador se leen del propio paquete.
+          $coincidencia = Select-String -Path 'thc_contabilidad\__init__.py' -Pattern '__version__\s*=\s*"([^"]+)"'
+          if (-not $coincidencia) { throw 'No se pudo leer la versión del paquete.' }
+          $version = $coincidencia.Matches[0].Groups[1].Value
+          $notas = "RELEASE_NOTES_$etiqueta.md"
+          if (-not (Test-Path $notas)) { $notas = "RELEASE_NOTES_v$version.md" }
+          if (-not (Test-Path $notas)) { throw "Faltan las notas para $etiqueta." }
+          $titulo = "THC Contabilidad $version"
           $instalador = Get-ChildItem -Path windows/Output -Filter *.exe | Select-Object -First 1
           if (-not $instalador) { throw 'No se generó ningún instalador.' }
-          gh release view $version 2>$null | Out-Null
+          gh release view $etiqueta 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) {
-              gh release upload $version $instalador.FullName --clobber
+              gh release upload $etiqueta $instalador.FullName --clobber
           } else {
-              gh release create $version $instalador.FullName --title "THC Contabilidad $version" --notes-file $notas --verify-tag
+              gh release create $etiqueta $instalador.FullName --title $titulo --notes-file $notas --verify-tag
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

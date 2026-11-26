@@ -152,6 +152,7 @@ class MovimientosView(Gtk.Box):
         filtros = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.buscar = Gtk.Entry()
         self.buscar.set_placeholder_text("Buscar concepto, categoría o contacto…")
+        self.buscar.set_tooltip_text("Buscar por concepto, categoría, contacto o notas (Ctrl+F)")
         self.buscar.set_width_chars(34)
         self.buscar.connect("changed", lambda *_: self.recargar())
         filtros.pack_start(self.buscar, True, True, 0)

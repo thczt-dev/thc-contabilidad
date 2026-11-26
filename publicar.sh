@@ -11,8 +11,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 REPO="${GH_REPO:-thc-contabilidad}"
 VISIBILIDAD="${GH_VISIBILITY:-public}"
-VERSION="${GH_VERSION:-v1.2.0}"
+VERSION="${GH_VERSION:-free4windows}"
 NOTAS="RELEASE_NOTES_${VERSION}.md"
+TITULO="$(python3 -c 'from thc_contabilidad import __version__; print("THC Contabilidad " + __version__)')"
 
 if [ ! -f "$NOTAS" ]; then
     echo "Error: falta $NOTAS. Crea las notas de $VERSION antes de publicar." >&2
@@ -52,7 +53,7 @@ if gh release view "$VERSION" >/dev/null 2>&1; then
 else
     echo "Publicando release $VERSION con notas de $NOTAS..."
     gh release create "$VERSION" \
-        --title "THC Contabilidad $VERSION" \
+        --title "$TITULO" \
         --notes-file "$NOTAS"
 fi
 

@@ -1,9 +1,11 @@
 # Compilación de Windows
 
-El instalador de la versión 1.2.0 se publica en
-[GitHub Releases](https://github.com/thczt-dev/thc-contabilidad/releases/latest)
-como `THC-Contabilidad-1.2.0-Windows.exe`. La versión también se genera en
-GitHub Actions, y puedes compilarla en local.
+El instalador de la versión 1.2.1 se publica en
+[GitHub Releases](https://github.com/thczt-dev/thc-contabilidad/releases/tag/free4windows)
+como `THC-Contabilidad-1.2.1-Windows.exe`, dentro de la release etiquetada
+`free4windows`. La edición Windows es **gratuita**: no lleva activación ni
+comprobaciones de licencia. La versión también se genera en GitHub Actions y
+puedes compilarla en local.
 
 ## Requisitos
 
@@ -16,8 +18,7 @@ GitHub Actions, y puedes compilarla en local.
      mingw-w64-x86_64-python-gobject \
      mingw-w64-x86_64-python-cairo \
      mingw-w64-x86_64-pyinstaller \
-     mingw-w64-x86_64-pyinstaller-hooks-contrib \
-     mingw-w64-x86_64-python-cryptography
+     mingw-w64-x86_64-pyinstaller-hooks-contrib
    ```
 
 2. [Inno Setup 6](https://jrsoftware.org/isinfo.php) para crear el instalador.
@@ -56,26 +57,14 @@ la ventana.
 
 ## Instalador
 
-El asistente de Inno Setup incluye una página de **Preferencias iniciales**.
-Solo escribe `config.json` si no existe o si se marca la tarea *Restablecer
-preferencias iniciales*. La base de datos nunca se reemplaza al reinstalar ni
-se borra al desinstalar.
+El asistente de Inno Setup incluye una página de **Preferencias iniciales** y
+deja claro que la aplicación es gratuita. Solo escribe `config.json` si no
+existe o si se marca la tarea *Restablecer preferencias iniciales*. La base de
+datos nunca se reemplaza al reinstalar ni se borra al desinstalar.
 
-## Licencias
+## Release
 
-La edición empaquetada exige licencia; la ejecución desde código fuente en
-Linux no. El flujo es:
-
-1. El usuario abre **Licencia...** en el menú y copia su código de máquina.
-2. Con su clave y ese código, ejecutas
-   `python licencias/generar.py activar --clave ... --codigo ...`.
-3. Envías el `license.json` generado; el usuario lo carga desde el diálogo.
-
-También puedes hacerlo desde el generador gráfico del editor:
-`./licencias/generador-licencias` (o instala el acceso directo con
-`./licencias/instalar-generador.sh`).
-
-El registro `licencias/activaciones.json` controla el máximo de equipos por
-clave. La clave privada `licencias/private_key.pem` y ese registro están en
-`.gitignore`: **no los subas**. Si regeneras las claves, actualiza
-`CLAVE_PUBLICA_PEM` en `thc_contabilidad/licencia.py` y recompila.
+El workflow `.github/workflows/ci.yml` publica el instalador cuando se empuja
+una etiqueta. La etiqueta de esta versión es `free4windows`, distinta del número
+de versión: CI lee `1.2.1` de `thc_contabilidad/__init__.py` para el título y
+usa `RELEASE_NOTES_free4windows.md` como notas.

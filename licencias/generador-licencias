@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# Lanzador del generador visual de licencias (uso del editor, no de la app).
-set -euo pipefail
-
-BASE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-RAIZ="$(dirname -- "$BASE_DIR")"
-export PYTHONPATH="${RAIZ}${PYTHONPATH:+:${PYTHONPATH}}"
-
-exec python3 "$BASE_DIR/generador_gui.py" "$@"

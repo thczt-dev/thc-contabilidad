@@ -19,12 +19,12 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, Gtk  # noqa: E402
 
-from . import asistente, config, licencia, theme  # noqa: E402
+from . import asistente, config, theme  # noqa: E402
 from .db import Database  # noqa: E402
 from .i18n import tr  # noqa: E402
 from .ui_helpers import boton, etiqueta  # noqa: E402
 from .views import (  # noqa: E402
-    AjustesDialog, CalendarioView, CobrosView, ContactosView, LicenciaDialog,
+    AjustesDialog, AtajosDialog, CalendarioView, CobrosView, ContactosView,
     MovimientosView, ProyectosView, ReportesView, ResumenView,
 )
 
@@ -90,7 +90,8 @@ class ThcApplication(Gtk.Application):
             ("cobro", self._nuevo_cobro),
             ("exportar", self._exportar),
             ("ajustes", self._abrir_ajustes),
-            ("licencia", self._abrir_licencia),
+            ("buscar", self._buscar_movimientos),
+            ("atajos", self._abrir_atajos),
             ("acerca-de", self._acerca_de),
             ("salir", self._salir),
         )
@@ -99,12 +100,29 @@ class ThcApplication(Gtk.Application):
             accion.connect("activate", funcion)
             self.add_action(accion)
 
+        # Una acción por pestaña permite usar Ctrl + 1 … 7 sin depender del
+        # orden interno del Notebook ni del idioma de las etiquetas.
+        for indice in range(len(PESTANAS)):
+            nombre = f"pagina-{indice + 1}"
+            accion = Gio.SimpleAction.new(nombre, None)
+            accion.connect(
+                "activate",
+                lambda _accion, _parametro, indice=indice: self._ir_a_pestana(indice),
+            )
+            self.add_action(accion)
+
         self.set_accels_for_action("app.nuevo-movimiento", ["<Control>n"])
         self.set_accels_for_action("app.nuevo-proyecto", ["<Control>p"])
         self.set_accels_for_action("app.calendario", ["<Control><Shift>c"])
         self.set_accels_for_action("app.cobro", ["<Control><Shift>v"])
         self.set_accels_for_action("app.exportar", ["<Control>e"])
         self.set_accels_for_action("app.ajustes", ["<Control>comma"])
+        self.set_accels_for_action("app.buscar", ["<Control>f"])
+        self.set_accels_for_action("app.atajos", ["<Control>F1"])
+        for indice in range(len(PESTANAS)):
+            self.set_accels_for_action(
+                f"app.pagina-{indice + 1}", [f"<Control>{indice + 1}"]
+            )
         self.set_accels_for_action("app.salir", ["<Control>q"])
 
     def do_activate(self):
@@ -114,9 +132,6 @@ class ThcApplication(Gtk.Application):
                 cargar_estilos()
             self.db = Database(RUTA_DB)
             self.window = MainWindow(self, self.db)
-        if not self._verificar_licencia():
-            self.quit()
-            return
         self.window.present()
 
     def _nuevo_movimiento(self, _accion, _parametro):
@@ -161,34 +176,22 @@ class ThcApplication(Gtk.Application):
         else:
             self.window.set_status(tr("Preferencias guardadas"))
 
-    def _abrir_licencia(self, _accion=None, _parametro=None):
+    def _abrir_atajos(self, _accion=None, _parametro=None):
         if not self.window:
             return
-        dialogo = LicenciaDialog(self.window)
+        dialogo = AtajosDialog(self.window)
         dialogo.run()
         dialogo.destroy()
-        licencia.registrar_arranque()
-        self.window.set_status(licencia.texto_estado())
 
-    def _verificar_licencia(self) -> bool:
-        if not licencia.es_edicion_paga():
-            return True
-        if licencia.estado()["activa"]:
-            licencia.registrar_arranque()
-            return True
-        self._abrir_licencia()
-        if licencia.estado()["activa"]:
-            return True
-        aviso = Gtk.MessageDialog(
-            transient_for=self.window,
-            modal=True,
-            message_type=Gtk.MessageType.WARNING,
-            buttons=Gtk.ButtonsType.OK,
-            text="Se necesita una licencia activa para usar la edición Windows.",
-        )
-        aviso.run()
-        aviso.destroy()
-        return False
+    def _buscar_movimientos(self, _accion=None, _parametro=None):
+        if not self.window:
+            return
+        self.window.ir_a(self.window.movimientos)
+        self.window.movimientos.buscar.grab_focus()
+
+    def _ir_a_pestana(self, indice: int):
+        if self.window:
+            self.window.ir_a(indice)
 
     def recargar_interfaz(self):
         """Reconstruye la ventana para que el nuevo idioma se vea en todas partes."""
@@ -263,8 +266,7 @@ class MainWindow(Gtk.ApplicationWindow):
         menu.append(tr("Ver calendario"), "app.calendario")
         menu.append(tr("Exportar movimientos a CSV"), "app.exportar")
         menu.append(tr("Ajustes"), "app.ajustes")
-        if licencia.es_edicion_paga():
-            menu.append("Licencia...", "app.licencia")
+        menu.append(tr("Atajos de teclado"), "app.atajos")
         menu.append(tr("Acerca de THC Contabilidad"), "app.acerca-de")
         menu.append(tr("Salir"), "app.salir")
         boton_menu = Gtk.MenuButton()
@@ -280,11 +282,9 @@ class MainWindow(Gtk.ApplicationWindow):
         ajustes.connect("clicked", lambda *_: self.aplicacion._abrir_ajustes())
         cabecera.pack_end(ajustes)
 
-        texto_estado = (
-            licencia.texto_estado() if licencia.es_edicion_paga()
-            else "Listo. Todos los datos se guardan en este equipo."
+        self.status = etiqueta(
+            "Listo. Todos los datos se guardan en este equipo.", "status"
         )
-        self.status = etiqueta(texto_estado, "status")
         barra_estado = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         barra_estado.set_border_width(6)
         barra_estado.pack_start(self.status, False, False, 0)
